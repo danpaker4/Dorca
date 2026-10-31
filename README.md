@@ -1,5 +1,38 @@
 <h1 align="center">
-  <a href="https://onOrca.dev"><img src="resources/build/icon.png" alt="Orca" width="64" valign="middle" /></a> Orca
+  <a href="https://github.com/danpaker4/Dorca"><img src="resources/build/icon.png" alt="Dorca" width="64" valign="middle" /></a> Dorca
+</h1>
+
+## 🚀 Installing Dorca (Windows & macOS)
+
+**Dorca** installs completely side-by-side with official **Orca** without overwriting your existing Orca app or data.
+
+### 🪟 Windows (1-Click Install)
+1. Go to [**Dorca Releases**](https://github.com/danpaker4/Dorca/releases/latest).
+2. Download **`dorca-windows-setup.exe`** (or **`Dorca-win-x64.zip`**) and run it.
+3. Future updates work automatically via the in-app **Download → Update & Restart** button!
+
+### 🍎 macOS (First-Time Install)
+Open **Terminal** and run:
+```bash
+git clone https://github.com/danpaker4/Dorca.git ~/dorca
+cd ~/dorca
+pnpm install
+pnpm -C mobile install --frozen-lockfile
+pnpm run build:mac
+cp -R dist/mac-arm64/Dorca.app /Applications/Dorca.app 2>/dev/null || cp -R dist/mac/Dorca.app /Applications/Dorca.app
+open /Applications/Dorca.app
+```
+*(After installing once, future updates work automatically from the in-app **Update & Restart** button!)*
+
+### ✨ Dorca Custom Features & Shortcuts
+- **Cross-File Go to Definition & Route Navigation *(TypeScript / JavaScript)*:** `Ctrl + Click` (Windows) / `⌘ + Click` (macOS) or `F12` on any imported function/type or import file path (`'../utils/...'`, `'@/...'`) in `.ts` / `.tsx` / `.js` / `.jsx` files.
+- **Cross-File Find All References *(TypeScript / JavaScript)*:** `Ctrl + Click` / `⌘ + Click` on any exported symbol declaration or `Shift + Alt + F12` (`Find All References`) in `.ts` / `.tsx` / `.js` / `.jsx` files.
+- **VS Code Navigation History (Go Back / Go Forward):**
+  - **Windows / Linux:** `Alt + Left` (Back) / `Alt + Right` (Forward)
+  - **macOS:** `Ctrl + -` (Back) / `Ctrl + Shift + -` (Forward) (or `Ctrl + Option + Left/Right`)
+
+---
+<h1 align="center">
 </h1>
 
 <p align="center">

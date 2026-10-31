@@ -17,6 +17,10 @@ import { UpdaterMacInstallPreflight } from './updater-mac-install-preflight'
 import { prepareThisProcessShipItStaging } from './shipit-leftover-recovery'
 import { MAC_DEFERRED_STAGING_TIMEOUT_MS } from './updater-state'
 import { wslMoveInstallHold } from './updater-wsl-move-install-hold'
+import {
+  hasDorcaLocalRebuildInstaller,
+  launchDorcaLocalRebuildInstallerAndQuit
+} from './dorca-local-rebuild'
 
 export abstract class UpdaterInstallExecution extends UpdaterMacInstallPreflight {
   protected async performQuitAndInstall(): Promise<void> {
@@ -83,10 +87,13 @@ export abstract class UpdaterInstallExecution extends UpdaterMacInstallPreflight
         { state: 'downloaded', version: pendingVersion, installing: true },
         { force: true }
       )
-      if (!(await this.preflightMacInstall(pendingVersion))) {
+      const usingDorcaRebuild = hasDorcaLocalRebuildInstaller()
+      if (!usingDorcaRebuild && !(await this.preflightMacInstall(pendingVersion))) {
         return
       }
-      markMacQuitAndInstallInFlight()
+      if (!usingDorcaRebuild) {
+        markMacQuitAndInstallInFlight()
+      }
       await withUpdaterSpan({ stage: 'install' }, async (span) => {
         span.setAttribute('updater.version', pendingVersion || 'unknown')
         span.setAttribute('updater.platform', process.platform)
@@ -139,9 +146,13 @@ export abstract class UpdaterInstallExecution extends UpdaterMacInstallPreflight
         this.quitAndInstallNativeInvoked = true
         // Invoke before destroying PTYs/close guards so synchronous failure leaves the app usable.
         const supervisorOwnsRelaunch = this.updateInstallMode === 'supervised-headless-serve'
-        runWithLaunchPath(() =>
-          this.getAutoUpdater().quitAndInstall(supervisorOwnsRelaunch, !supervisorOwnsRelaunch)
-        )
+        if (hasDorcaLocalRebuildInstaller()) {
+          launchDorcaLocalRebuildInstallerAndQuit()
+        } else {
+          runWithLaunchPath(() =>
+            this.getAutoUpdater().quitAndInstall(supervisorOwnsRelaunch, !supervisorOwnsRelaunch)
+          )
+        }
         span.addEvent('native_quit_and_install_invoked')
 
         // Synchronous error dispatch may already have cleared the handoff; skip destructive prep.

@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { findDynamicVcRuntimeImports, readPeImportedDllNames } from './windows-pe-imports.mjs'
+import { seedPrebuiltWindowsNatives } from './seed-prebuilt-windows-natives.mjs'
 
 // Why explicit triples: both architectures cross-compile from one x64 runner.
 const RUST_TARGETS = {
@@ -82,6 +83,10 @@ export function compileWindowsRustExecutable({
   )
 
   mkdirSync(dirname(outputPath), { recursive: true })
+  seedPrebuiltWindowsNatives()
+  if (existsSync(outputPath) && !existsSync(`${outputPath}.sha256`)) {
+    writeFileSync(`${outputPath}.sha256`, fingerprint)
+  }
   if (shouldReuseCompiledWindowsRustExecutable(outputPath, fingerprint)) {
     console.log(`[native-build] reusing ${label} at ${outputPath}`)
     return

@@ -211,7 +211,7 @@ export function configureDevUserDataPath(isDev: boolean): void {
     return
   }
   // Why: launches that bypass the dev runner still need a dev-only path, or they overwrite the packaged app's runtime pointer under userData and break the orca CLI.
-  app.setPath('userData', join(app.getPath('appData'), 'orca-dev'))
+  app.setPath('userData', join(app.getPath('appData'), 'dorca-dev'))
 }
 
 function areSameE2EHomePath(left: string, right: string): boolean {
