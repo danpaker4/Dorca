@@ -23,7 +23,7 @@ export function MobileHomeTopBar({
           <View style={styles.logoMark}>
             <OrcaLogo size={19} />
           </View>
-          <Text style={styles.brandName}>Orca</Text>
+          <Text style={styles.brandName}>Dorca</Text>
         </View>
       ) : (
         <View />

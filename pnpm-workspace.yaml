@@ -60,11 +60,11 @@ allowBuilds:
   '@vscode/windows-process-tree': false
   agent-browser: false
   bun: true
-  cpu-features: true
+  cpu-features: false
   electron-winstaller: false
   esbuild: true
   msw: false
-  node-pty: true
+  node-pty: false
   ssh2: false
   '@orca/windows-registry': false
   '@orca/windows-security': false

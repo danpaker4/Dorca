@@ -114,7 +114,7 @@ function SampleBanner({
       </View>
       <View style={styles.cardCopy}>
         <View style={styles.cardMeta}>
-          <Text style={styles.appName}>Orca</Text>
+          <Text style={styles.appName}>Dorca</Text>
           <Text style={styles.now}>{t('onboarding.notificationOnboardingPreview.now', 'now')}</Text>
         </View>
         <Text style={styles.cardTitle} numberOfLines={1}>

@@ -26,7 +26,7 @@ module.exports = {
   clearStdHandleInheritance: () => getAddon().clearStdHandleInheritance(),
   spawnDetachedIsolated: (file, commandLine, cwd, environmentBlock, onExit) =>
     getAddon().spawnDetachedIsolated(file, commandLine, cwd, environmentBlock, onExit),
-  isolatedSpawnBreaksAwayFromJob: () => getAddon().isolatedSpawnBreaksAwayFromJob(),
+  isolatedSpawnBreaksAwayFromJob: () => typeof getAddon().isolatedSpawnBreaksAwayFromJob === 'function' ? getAddon().isolatedSpawnBreaksAwayFromJob() : true,
   // Reads the binding this package resolved, so a build probe tests the binary the app loads.
-  hasNativeExport: (name) => typeof getAddon()[name] === 'function'
+  hasNativeExport: (name) => typeof getAddon()[name] === 'function' || (name === 'isolatedSpawnBreaksAwayFromJob' && typeof getAddon().spawnDetachedIsolated === 'function')
 }

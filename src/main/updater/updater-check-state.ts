@@ -6,6 +6,7 @@ import type { UpdateCheckOptions, UpdateStatus } from '../../shared/update-statu
 import type { UpdateCheckVariant } from './updater-types'
 import { UpdaterStatus } from './updater-status'
 import type { UpdaterCodedMessage } from '../../shared/updater-failure-copy'
+import { checkForDorcaForkReleaseUpdate } from './dorca-local-rebuild'
 import {
   AUTO_UPDATE_CHECK_INTERVAL_MS,
   AUTO_UPDATE_RETRY_INTERVAL_MS,
@@ -301,6 +302,20 @@ export abstract class UpdaterCheckState extends UpdaterStatus {
         },
         status.userInitiated
       )
+    } else if (status.state === 'not-available') {
+      void checkForDorcaForkReleaseUpdate().then((dorcaRelease) => {
+        if (dorcaRelease) {
+          this.availableVersion = dorcaRelease.version
+          this.availableReleaseUrl = dorcaRelease.releaseUrl
+          this.sendStatus({
+            state: 'available',
+            version: dorcaRelease.version,
+            releaseUrl: dorcaRelease.releaseUrl
+          })
+          return
+        }
+        this.sendStatus(status)
+      })
     } else {
       this.sendStatus(status)
     }

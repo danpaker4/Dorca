@@ -16,6 +16,7 @@ import {
 } from './windows-process-tree-gyp-rebuild.mjs'
 import { disableMsbuildFileTrackingOnWindows } from './msbuild-file-tracking.mjs'
 import { warnAboutNodeModulesAboveSharedStore } from './store-ancestor-node-modules.mjs'
+import { seedPrebuiltWindowsNatives } from './seed-prebuilt-windows-natives.mjs'
 import {
   isSharedNativePackage,
   nodePtyBuildArtifactPaths,
@@ -86,6 +87,7 @@ const forceRebuild =
 let modulesToRebuild = onlyModules
 
 warnAboutNodeModulesAboveSharedStore(projectDir)
+seedPrebuiltWindowsNatives()
 ensureElectronPackageInstalled()
 restoreNodePtyWindowsConptyRuntime()
 

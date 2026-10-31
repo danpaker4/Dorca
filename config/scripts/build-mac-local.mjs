@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync } from 'node:fs'
 import { resolve } from 'node:path'
 
 export function createLocalBuildVersion(baseVersion, timestamp, commit) {
@@ -43,4 +43,20 @@ if (process.argv[1] && resolve(process.argv[1]) === resolve(import.meta.filename
       stdio: 'inherit'
     }
   )
+
+  if (process.platform === 'darwin') {
+    const builtAppPath = [
+      resolve('dist/mac-arm64/Dorca.app'),
+      resolve('dist/mac/Dorca.app'),
+      resolve('dist/mac-universal/Dorca.app')
+    ].find((candidate) => existsSync(candidate))
+
+    if (builtAppPath) {
+      const targetAppPath = '/Applications/Dorca.app'
+      console.log(`[build:mac] installing ${builtAppPath} -> ${targetAppPath}`)
+      rmSync(targetAppPath, { recursive: true, force: true })
+      execFileSync('ditto', [builtAppPath, targetAppPath], { stdio: 'inherit' })
+      execFileSync('open', [targetAppPath], { stdio: 'inherit' })
+    }
+  }
 }
