@@ -1,6 +1,5 @@
 {
   "name": "orca",
-  "productName": "Dorca",
   "version": "1.4.246",
   "description": "Next-gen IDE for parallel agentic development",
   "homepage": "https://github.com/stablyai/orca",

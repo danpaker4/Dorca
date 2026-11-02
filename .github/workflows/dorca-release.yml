@@ -1,0 +1,110 @@
+name: Dorca Windows release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Dorca version (for example 2.0.1); blank increments the patch version'
+        type: string
+        required: false
+      upstream_tag:
+        description: 'Official Orca stable tag; blank selects the latest official release'
+        type: string
+        required: false
+  schedule:
+    - cron: '23 6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dorca-release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.repository == 'danpaker4/Dorca' && github.ref == 'refs/heads/main'
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      ORCA_BACKGROUND_LAUNCH: '1'
+      ORCA_PNPM_GLOBAL_VIRTUAL_STORE: '0'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      NODE_OPTIONS: --max-old-space-size=6144
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+
+      - name: Integrate the official Orca release
+        id: prepare
+        env:
+          DORCA_RELEASE_VERSION: ${{ inputs.version }}
+          DORCA_UPSTREAM_TAG: ${{ inputs.upstream_tag }}
+        run: node config/scripts/dorca-release.mjs prepare
+
+      - uses: ./.github/actions/install-node-dependencies
+        if: steps.prepare.outputs.should_release == 'true'
+        with:
+          native-runtime: node
+
+      - uses: ./.github/actions/install-mobile-dependencies
+        if: steps.prepare.outputs.should_release == 'true'
+
+      - name: Check updater and release behavior
+        if: steps.prepare.outputs.should_release == 'true'
+        run: >-
+          pnpm exec vitest run --config config/vitest.config.ts --maxWorkers=2
+          config/scripts/dorca-release.test.mjs
+          config/scripts/electron-builder-config.test.mjs
+          src/main/updater-prerelease-feed.test.ts
+          src/main/updater-prerelease-feed-readiness.test.ts
+          src/main/updater-release-builds.test.ts
+          src/main/updater.check-preflight.test.ts
+          src/main/updater.quit-and-install.test.ts
+          src/main/updater.dorca-release.test.ts
+          src/shared/release-channel.test.ts
+
+      - name: Typecheck the integrated application
+        if: steps.prepare.outputs.should_release == 'true'
+        run: pnpm tc
+
+      - name: Build the application and Windows native components
+        if: steps.prepare.outputs.should_release == 'true'
+        run: pnpm run build:release
+
+      - name: Package the Windows installer and update metadata
+        if: steps.prepare.outputs.should_release == 'true'
+        run: >-
+          pnpm exec electron-builder --config config/electron-builder.config.cjs
+          --win nsis --x64 --publish never
+
+      - name: Verify the installer, packaged identity and update feed
+        if: steps.prepare.outputs.should_release == 'true'
+        run: node config/scripts/dorca-release.mjs verify
+
+      - name: Retain the validated Windows build
+        if: steps.prepare.outputs.should_release == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dorca-windows-${{ steps.prepare.outputs.version }}
+          path: |
+            dist/dorca-windows-setup.exe
+            dist/dorca-windows-setup.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish the complete Dorca release
+        if: steps.prepare.outputs.should_release == 'true'
+        run: node config/scripts/dorca-release.mjs publish

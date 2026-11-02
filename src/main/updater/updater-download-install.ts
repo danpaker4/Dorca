@@ -10,11 +10,6 @@ import { updaterCodedMessage } from '../../shared/updater-failure-copy'
 import { QUIT_AND_INSTALL_DELAY_MS } from './updater-state'
 import { UpdaterRemoteStatus } from './updater-remote-status'
 import { prepareThisProcessShipItStaging } from './shipit-leftover-recovery'
-import {
-  canUseDorcaLocalRebuild,
-  hasDorcaLocalRebuildInstaller,
-  runDorcaLocalRebuildUpdate
-} from './dorca-local-rebuild'
 
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
@@ -35,7 +30,6 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
     this.finishActiveUpdateCheckAttempt()
     this.clearBackgroundCheckLaunchPending()
     if (
-      !hasDorcaLocalRebuildInstaller() &&
       !this.isMacStagingDeferredToInstall() &&
       deferMacQuitUntilInstallerReady(
         this.currentStatus,
@@ -47,7 +41,7 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
       return
     }
 
-    if (process.platform === 'darwin' && !hasDorcaLocalRebuildInstaller()) {
+    if (process.platform === 'darwin') {
       setMacInstallPreflightInProgress(true)
     }
     // Defer quit one tick so the renderer can flush state before windows close.
@@ -104,22 +98,6 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
     // Acknowledge acceptance before setup delays progress events so the card responds immediately.
     this.sendStatus({ state: 'downloading', percent: 0, version })
     const startDownload = (): void => {
-      if (canUseDorcaLocalRebuild() && !localBuildDownload) {
-        runDorcaLocalRebuildUpdate((percent) => {
-          this.sendStatus({ state: 'downloading', percent, version })
-        })
-          .then(() => {
-            this.downloadInFlight = false
-            this.availableVersion = version
-            this.sendStatus({ state: 'downloaded', version })
-          })
-          .catch((err) => {
-            this.downloadInFlight = false
-            const message = String(err?.message ?? err)
-            this.sendErrorStatus(message)
-          })
-        return
-      }
       this.getAutoUpdater()
         .downloadUpdate()
         .catch((err) => {

@@ -7,12 +7,17 @@
 **Dorca** installs completely side-by-side with official **Orca** without overwriting your existing Orca app or data.
 
 ### 🪟 Windows (1-Click Install)
-1. Go to [**Dorca Releases**](https://github.com/danpaker4/Dorca/releases/latest).
-2. Download **`dorca-windows-setup.exe`** (or **`Dorca-win-x64.zip`**) and run it.
-3. Future updates work automatically via the in-app **Download → Update & Restart** button!
 
-### 🍎 macOS (First-Time Install)
+1. Go to [**Dorca Releases**](https://github.com/danpaker4/Dorca/releases/latest).
+2. Download **`dorca-windows-setup.exe`** and run it.
+3. Starting with **Dorca 2.0.0**, future published Dorca releases install through **Download → Update & Restart**. No Git, Node.js, pnpm or source checkout is needed.
+
+Windows installers are currently unsigned, so Windows may show an unknown-publisher prompt.
+
+### 🍎 macOS (Build from Source)
+
 Open **Terminal** and run:
+
 ```bash
 git clone https://github.com/danpaker4/Dorca.git ~/dorca
 cd ~/dorca
@@ -20,15 +25,26 @@ pnpm install
 pnpm -C mobile install --frozen-lockfile
 pnpm run build:mac
 ```
-*(After installing once, future updates work automatically from the in-app **Update & Restart** button!)*
+
+macOS has no prebuilt installer or automatic updates in this fork. Update the source and rebuild on your Mac. The Windows release workflow does not require Apple credentials.
+
+### Publishing and automatic Orca integration
+
+The [Dorca Windows release workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-release.yml) checks daily for the latest **official stable Orca release**, integrates its exact tag, and builds and checks Dorca before publishing a complete Windows release. It does not pull unreleased Orca `main` commits onto users' computers.
+
+If the integration conflicts or validation fails, publication stops and installed copies keep working. Resolve the conflict in Dorca once, then rerun the workflow. The known package-version/branding conflict is handled automatically; other conflicting code is never silently discarded.
+
+To release your own Dorca changes, open that workflow, choose **Run workflow** on `main`, and optionally enter a new Dorca version such as `2.0.1`. Leaving the version blank increments the patch version. Normal commits do not trigger update popups. The workflow publishes the release only after the installer, blockmap and `latest.yml` are complete and their checksums match.
+
+Dorca's release version and integrated Orca tag are recorded separately in `config/dorca-release.json`; this keeps Dorca updates increasing even when Orca changes its own version. Versions start at 2.0.0 because the original installer internally reported 1.4.214.
 
 ### ✨ Dorca Custom Features & Shortcuts
 
-- **Cross-File Go to Definition & Route Navigation *(TypeScript / JavaScript)*:**
+- **Cross-File Go to Definition & Route Navigation _(TypeScript / JavaScript)_:**
   - **Windows / Linux:** `Ctrl + Click` or `F12` on any imported function/type or import file path (`'../utils/...'`, `'@/...'`)
   - **macOS:** `⌘ + Click` or `F12` on any imported function/type or import file path (`'../utils/...'`, `'@/...'`)
 
-- **Cross-File Find All References *(TypeScript / JavaScript)*:**
+- **Cross-File Find All References _(TypeScript / JavaScript)_:**
   - **Windows / Linux:** `Ctrl + Click` on any exported symbol declaration or `Shift + Alt + F12` (`Find All References`)
   - **macOS:** `⌘ + Click` on any exported symbol declaration or `Shift + Option + F12` (`Find All References`)
 
@@ -37,6 +53,7 @@ pnpm run build:mac
   - **macOS:** `Ctrl + -` (Back) / `Ctrl + Shift + -` (Forward) (or `Ctrl + Option + Left/Right`)
 
 ---
+
 <h1 align="center">
 </h1>
 

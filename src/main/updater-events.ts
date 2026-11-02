@@ -16,7 +16,6 @@ import {
 import { isExternallyManagedLinuxInstall } from './linux-update-package-type'
 import * as linuxPackageRecovery from './linux-package-update-recovery'
 import { preExtractDownloadedAppImageUpdate } from './cli/appimage-copy-pre-extraction'
-import { checkForDorcaForkReleaseUpdate } from './updater/dorca-local-rebuild'
 
 const AUTO_UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000
 const AUTO_UPDATE_RETRY_INTERVAL_MS = 60 * 60 * 1000
@@ -114,24 +113,12 @@ export function registerAutoUpdaterHandlers({
           scheduleAutomaticUpdateCheck(AUTO_UPDATE_CHECK_INTERVAL_MS)
         }
       }
-      void checkForDorcaForkReleaseUpdate().then((dorcaRelease) => {
-        if (dorcaRelease) {
-          setAvailableVersion(dorcaRelease.version)
-          setAvailableReleaseUrl(dorcaRelease.releaseUrl)
-          sendStatus({
-            state: 'available',
-            version: dorcaRelease.version,
-            releaseUrl: dorcaRelease.releaseUrl
-          })
-          return
+      sendStatus(
+        getRetainedLinuxPackageManualInstallStatus() ?? {
+          state: 'not-available',
+          userInitiated: wasUserInitiated || undefined
         }
-        sendStatus(
-          getRetainedLinuxPackageManualInstallStatus() ?? {
-            state: 'not-available',
-            userInitiated: wasUserInitiated || undefined
-          }
-        )
-      })
+      )
       return
     }
 
@@ -210,22 +197,10 @@ export function registerAutoUpdaterHandlers({
         }
       }
     }
-    void checkForDorcaForkReleaseUpdate().then((dorcaRelease) => {
-      if (dorcaRelease && !localBuildCheck && !pinnedBuildCheck) {
-        setAvailableVersion(dorcaRelease.version)
-        setAvailableReleaseUrl(dorcaRelease.releaseUrl)
-        sendStatus({
-          state: 'available',
-          version: dorcaRelease.version,
-          releaseUrl: dorcaRelease.releaseUrl
-        })
-        return
-      }
-      // Preserve manual-install recovery when a recheck finds no newer release.
-      sendStatus(
-        retainedStatus ?? { state: 'not-available', userInitiated: wasUserInitiated || undefined }
-      )
-    })
+    // Preserve manual-install recovery when a recheck finds no newer release.
+    sendStatus(
+      retainedStatus ?? { state: 'not-available', userInitiated: wasUserInitiated || undefined }
+    )
     if (localBuildCheck || pinnedBuildCheck) {
       restoreReleaseUpdateSource()
     }

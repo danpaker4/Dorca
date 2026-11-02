@@ -70,6 +70,7 @@ const {
 } = require('./scripts/appimage-node-runtime.cjs')
 const { signWindowsUninstallerViaSignPath } = require('./scripts/windows-uninstaller-signing.cjs')
 const { buildMacShipItScheduling } = require('./scripts/macos-shipit-scheduling.cjs')
+const dorcaRelease = require('./dorca-release.json')
 
 // Dev channels need release bundle ID/signature/notarization so Squirrel.Mac accepts updates and macOS retains app identity.
 const isMacHourly = process.env.ORCA_MAC_HOURLY === '1'
@@ -243,7 +244,7 @@ module.exports = {
     ? { extraMetadata: { version: devChannelBuildVersion } }
     : localBuildVersion
       ? { extraMetadata: { version: localBuildVersion } }
-      : { extraMetadata: { name: 'dorca' } }),
+      : { extraMetadata: { name: 'dorca', productName: 'Dorca', version: dorcaRelease.version } }),
   directories: {
     buildResources: 'resources/build'
   },
@@ -515,14 +516,9 @@ module.exports = {
   },
   win: {
     executableName: 'Dorca',
-    // SignPath signs Windows installers after packaging, so set release publisherName explicitly.
-    // Unsigned dev channels omit it or updater signature checks reject dev updates and return to stable.
-    // Sign hook signs nothing: it relays transient NSIS uninstaller files to CI SignPath; unset relay env leaves local/dev builds inert.
-    signtoolOptions: {
-      sign: signWindowsUninstallerViaSignPath,
-      ...(isWinDevChannel ? {} : { publisherName: 'SignPath Foundation' })
-    },
-    ...(isWinDevChannel ? { verifyUpdateCodeSignature: false } : {}),
+    // Dorca distributes unsigned installers; Orca's SignPath certificate does not belong to this fork.
+    signtoolOptions: { sign: signWindowsUninstallerViaSignPath },
+    verifyUpdateCodeSignature: false,
     extraResources: [
       ...commonExtraResources,
       ...windowsRuntimeResources,
@@ -739,8 +735,8 @@ module.exports = {
   npmRebuild: true,
   publish: {
     provider: 'github',
-    owner: 'stablyai',
-    repo: devChannelRepo ?? 'orca',
+    owner: 'danpaker4',
+    repo: 'Dorca',
     // Keep main-repo releases draft until release-cut verifies all assets; early --publish always would expose missing Windows installers.
     releaseType: devChannelRepo ? 'prerelease' : 'draft'
   }
