@@ -11,12 +11,14 @@ const requestedTag = process.env.DORCA_MAC_TAG?.trim()
 if (requestedTag && !/^v\d+\.\d+\.\d+$/.test(requestedTag)) {
   throw new Error('Select a stable Dorca release tag')
 }
-const release = JSON.parse(
-  run([
-    'api',
-    requestedTag ? `repos/${REPO}/releases/tags/${requestedTag}` : `repos/${REPO}/releases/latest`
-  ])
-)
+const release = requestedTag
+  ? JSON.parse(run(['api', `repos/${REPO}/releases?per_page=100`])).find(
+      (entry) => entry.tag_name === requestedTag
+    )
+  : JSON.parse(run(['api', `repos/${REPO}/releases/latest`]))
+if (!release) {
+  throw new Error('The requested Dorca release was not found in the recent release list')
+}
 if (
   (release.draft && !requestedTag) ||
   release.prerelease ||
