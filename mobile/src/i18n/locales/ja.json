@@ -21,7 +21,6 @@
     "panel": {
       "all": "全て",
       "emptyScope": "この範囲には過去の Agent セッションがありません。",
-      "loadFailed": "読み込めません",
       "missingResumeId": "このセッションには再開用の ID がありません。",
       "noSearchResults": "検索に一致するセッションはありません。",
       "noSessions": "Agent セッションはありません",
@@ -522,6 +521,10 @@
       "disconnected": "添付に失敗しました（接続切断）。",
       "imageTooLarge": "画像が大きすぎて添付できません。",
       "permissionDenied": "写真へのアクセスが拒否されました。"
+    },
+    "agentMessage": {
+      "handedOffToAgent": "Agentに引き継ぎました",
+      "startedAgent": "Agentを開始しました"
     }
   },
   "common": {
@@ -654,7 +657,6 @@
       "loadingDiff": "差分を読み込み中…",
       "loadingReview": "レビューを読み込み中…",
       "noReviewableChanges": "レビュー可能な変更がありません",
-      "retryLabel": "レビューの読み込みを再試行",
       "reviewUnavailable": "レビューを利用できません",
       "selectFile": "レビューするファイルを選択してください。",
       "tooLargeMessage": "この差分は大きすぎるため、モバイルではプレビューできません。",
@@ -848,10 +850,8 @@
       "selectRunTarget": "実行先を選択"
     },
     "prSidebar": {
-      "loadFailed": "問題が発生しました。",
       "loading": "PR を読み込み中…",
-      "notPermitted": "GitHub アカウントが接続されていないため、アクセスできません。",
-      "retryLoading": "PR の読み込みを再試行"
+      "notPermitted": "GitHub アカウントが接続されていないため、アクセスできません。"
     },
     "protocolBlockScreen": {
       "backToHosts": "ホストに戻る",
@@ -1000,6 +1000,16 @@
       "title": "問題が発生しました",
       "tryAgain": "再試行",
       "home": "ホーム"
+    },
+    "svgPreview": {
+      "drawFailed": "この SVG を描画できません",
+      "label": "{{title}} の図",
+      "previewDrawing": "図をプレビュー",
+      "viewSource": "SVG ソースを表示"
+    },
+    "mermaidDiagram": {
+      "expand": "図を拡大",
+      "label": "Mermaid 図"
     }
   },
   "connection": {
@@ -2838,12 +2848,6 @@
       "baseBranchUnavailable": "比較用のベースブランチを特定できませんでした。",
       "loadFailed": "コミット済みの変更を読み込めませんでした。"
     },
-    "branchDiffPreviewDrawer": {
-      "closePreview": "コミット済みの差分プレビューを閉じる",
-      "committedOnBranch": "ブランチでコミット済み",
-      "loadFailed": "差分を読み込めません",
-      "truncated": "モバイルでのプレビュー用に差分を一部省略しています。"
-    },
     "commitDropdown": {
       "checkOutBranchToPush": "コミットをプッシュする前にブランチをチェックアウトしてください",
       "checkOutBranchToSync": "コミットを同期する前にブランチをチェックアウトしてください",
@@ -3059,13 +3063,7 @@
       "prCreatedTitle": "PR を作成しました",
       "switchBranchTitle": "ブランチを切り替え"
     },
-    "openers": {
-      "openDiffFailed": "差分を開けませんでした。",
-      "tabNotReady": "ファイルは開きましたが、タブの準備がまだできていません。再試行してください。",
-      "waitingForDesktop": "デスクトップへの接続を待機中…"
-    },
     "panel": {
-      "loadFailedTitle": "読み込めません",
       "unavailableTitle": "ソース管理を利用できません"
     },
     "prChip": {
@@ -3893,8 +3891,7 @@
       "noFilterMatches": "フィルターに一致するワークスペースがありません",
       "noMatches": "一致するワークスペースがありません",
       "reopen": "開き直して更新",
-      "reopenDetail": "このページは、このホストのワークスペース一覧の形式にまだ対応していません。",
-      "retrying": "worktree.ps に失敗しました（{{error}}）。自動で再試行中です。"
+      "reopenDetail": "このページは、このホストのワークスペース一覧の形式にまだ対応していません。"
     },
     "workspaceListSections": {
       "all": "全て",

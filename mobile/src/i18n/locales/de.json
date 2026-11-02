@@ -21,7 +21,6 @@
     "panel": {
       "all": "Alle",
       "emptyScope": "Keine früheren Agentensitzungen in diesem Bereich.",
-      "loadFailed": "Laden fehlgeschlagen",
       "missingResumeId": "Dieser Sitzung fehlt eine ID zum Fortsetzen.",
       "noSearchResults": "Keine Sitzungen entsprechen der Suche.",
       "noSessions": "Keine Agentensitzungen",
@@ -526,6 +525,10 @@
       "disconnected": "Anhängen fehlgeschlagen (nicht verbunden)",
       "imageTooLarge": "Bild zum Anhängen zu groß",
       "permissionDenied": "Zugriff auf Fotos verweigert"
+    },
+    "agentMessage": {
+      "handedOffToAgent": "An Agenten übergeben",
+      "startedAgent": "Agent gestartet"
     }
   },
   "common": {
@@ -658,7 +661,6 @@
       "loadingDiff": "Diff wird geladen…",
       "loadingReview": "Review wird geladen…",
       "noReviewableChanges": "Keine Änderungen für ein Review",
-      "retryLabel": "Review erneut laden",
       "reviewUnavailable": "Review nicht verfügbar",
       "selectFile": "Eine Datei für das Review auswählen.",
       "tooLargeMessage": "Dieser Diff ist zu groß für die mobile Vorschau.",
@@ -852,10 +854,8 @@
       "selectRunTarget": "Ausführungsziel auswählen"
     },
     "prSidebar": {
-      "loadFailed": "Ein Fehler ist aufgetreten.",
       "loading": "Pull Request wird geladen…",
-      "notPermitted": "Nicht erlaubt – das GitHub-Konto ist nicht verbunden.",
-      "retryLoading": "Pull Request erneut laden"
+      "notPermitted": "Nicht erlaubt – das GitHub-Konto ist nicht verbunden."
     },
     "protocolBlockScreen": {
       "backToHosts": "Zurück zu Hosts",
@@ -1004,6 +1004,16 @@
       "title": "Etwas ist schiefgelaufen",
       "tryAgain": "Erneut versuchen",
       "home": "Startseite"
+    },
+    "svgPreview": {
+      "drawFailed": "Dieses SVG kann nicht dargestellt werden",
+      "label": "Zeichnung {{title}}",
+      "previewDrawing": "Zeichnung anzeigen",
+      "viewSource": "SVG-Quelltext anzeigen"
+    },
+    "mermaidDiagram": {
+      "expand": "Diagramm vergrößern",
+      "label": "Mermaid-Diagramm"
     }
   },
   "connection": {
@@ -2842,12 +2852,6 @@
       "baseBranchUnavailable": "Basis-Branch für den Vergleich konnte nicht ermittelt werden.",
       "loadFailed": "Committete Änderungen konnten nicht geladen werden."
     },
-    "branchDiffPreviewDrawer": {
-      "closePreview": "Diff-Vorschau der committeten Änderungen schließen",
-      "committedOnBranch": "Auf Branch committet",
-      "loadFailed": "Laden des Diffs fehlgeschlagen",
-      "truncated": "Diff für die mobile Vorschau gekürzt."
-    },
     "commitDropdown": {
       "checkOutBranchToPush": "Vor dem Pushen von Commits einen Branch auschecken",
       "checkOutBranchToSync": "Vor dem Synchronisieren von Commits einen Branch auschecken",
@@ -3063,13 +3067,7 @@
       "prCreatedTitle": "Pull Request erstellt",
       "switchBranchTitle": "Branch wechseln"
     },
-    "openers": {
-      "openDiffFailed": "Diff konnte nicht geöffnet werden.",
-      "tabNotReady": "Die Datei wurde geöffnet, aber ihr Tab ist noch nicht bereit. Erneut versuchen.",
-      "waitingForDesktop": "Warten auf den Desktop…"
-    },
     "panel": {
-      "loadFailedTitle": "Laden fehlgeschlagen",
       "unavailableTitle": "Quellcodeverwaltung nicht verfügbar"
     },
     "prChip": {
@@ -3897,8 +3895,7 @@
       "noFilterMatches": "Keine Arbeitsbereiche entsprechen den Filtern",
       "noMatches": "Keine passenden Arbeitsbereiche",
       "reopen": "Zum Aktualisieren erneut öffnen",
-      "reopenDetail": "Dieser Host listet Arbeitsbereiche in einem Format auf, das diese Seite noch nicht unterstützt.",
-      "retrying": "worktree.ps fehlgeschlagen ({{error}}) – wird automatisch erneut versucht"
+      "reopenDetail": "Dieser Host listet Arbeitsbereiche in einem Format auf, das diese Seite noch nicht unterstützt."
     },
     "workspaceListSections": {
       "all": "Alle",

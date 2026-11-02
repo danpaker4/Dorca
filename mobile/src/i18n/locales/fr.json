@@ -21,7 +21,6 @@
     "panel": {
       "all": "Toutes",
       "emptyScope": "Aucune session d'agent passée dans ce périmètre.",
-      "loadFailed": "Chargement impossible",
       "missingResumeId": "Cette session n'a pas d'identifiant de reprise.",
       "noSearchResults": "Aucune session ne correspond à votre recherche.",
       "noSessions": "Aucune session d'agent",
@@ -561,6 +560,10 @@
       "disconnected": "Échec de l'ajout (déconnecté)",
       "imageTooLarge": "Image trop volumineuse pour être jointe",
       "permissionDenied": "Accès aux photos refusé"
+    },
+    "agentMessage": {
+      "handedOffToAgent": "Confié à un agent",
+      "startedAgent": "Agent démarré"
     }
   },
   "common": {
@@ -694,7 +697,6 @@
       "loadingDiff": "Chargement du diff…",
       "loadingReview": "Chargement de la revue…",
       "noReviewableChanges": "Aucune modification à examiner",
-      "retryLabel": "Réessayer de charger la revue",
       "reviewUnavailable": "Revue indisponible",
       "selectFile": "Sélectionnez un fichier à examiner.",
       "tooLargeMessage": "Ce diff est trop volumineux pour l'aperçu sur mobile.",
@@ -894,10 +896,8 @@
       "selectRunTarget": "Choisir une cible d'exécution"
     },
     "prSidebar": {
-      "loadFailed": "Une erreur s'est produite.",
       "loading": "Chargement de la pull request…",
-      "notPermitted": "Accès refusé — votre compte GitHub n'est pas connecté.",
-      "retryLoading": "Réessayer de charger la pull request"
+      "notPermitted": "Accès refusé — votre compte GitHub n'est pas connecté."
     },
     "protocolBlockScreen": {
       "backToHosts": "Retour aux hôtes",
@@ -1047,6 +1047,16 @@
       "title": "Une erreur est survenue",
       "tryAgain": "Réessayer",
       "home": "Accueil"
+    },
+    "svgPreview": {
+      "drawFailed": "Impossible d’afficher ce SVG",
+      "label": "Dessin {{title}}",
+      "previewDrawing": "Aperçu du dessin",
+      "viewSource": "Afficher la source SVG"
+    },
+    "mermaidDiagram": {
+      "expand": "Agrandir le diagramme",
+      "label": "Diagramme Mermaid"
     }
   },
   "connection": {
@@ -2925,12 +2935,6 @@
       "baseBranchUnavailable": "Impossible de déterminer la branche de base pour la comparaison.",
       "loadFailed": "Impossible de charger les modifications committées"
     },
-    "branchDiffPreviewDrawer": {
-      "closePreview": "Fermer l'aperçu du diff committé",
-      "committedOnBranch": "Committé sur la branche",
-      "loadFailed": "Impossible de charger le diff",
-      "truncated": "Diff tronqué pour l'aperçu mobile."
-    },
     "commitDropdown": {
       "checkOutBranchToPush": "Effectuez un checkout d'une branche avant de pousser des commits",
       "checkOutBranchToSync": "Effectuez un checkout d'une branche avant de synchroniser des commits",
@@ -3158,13 +3162,7 @@
       "prCreatedTitle": "Pull request créée",
       "switchBranchTitle": "Changer de branche"
     },
-    "openers": {
-      "openDiffFailed": "Impossible d'ouvrir le diff",
-      "tabNotReady": "Le fichier est ouvert, mais son onglet n'est pas encore prêt. Réessayez.",
-      "waitingForDesktop": "En attente de l'ordinateur…"
-    },
     "panel": {
-      "loadFailedTitle": "Chargement impossible",
       "unavailableTitle": "Contrôle de code source indisponible"
     },
     "prChip": {
@@ -4005,8 +4003,7 @@
       "noFilterMatches": "Aucun espace de travail ne correspond aux filtres",
       "noMatches": "Aucun espace de travail correspondant",
       "reopen": "Rouvrir pour mettre à jour",
-      "reopenDetail": "Cet hôte fournit une liste d'espaces de travail dans un format que cette page ne reconnaît pas encore.",
-      "retrying": "Échec de worktree.ps ({{error}}) — nouvelle tentative automatique"
+      "reopenDetail": "Cet hôte fournit une liste d'espaces de travail dans un format que cette page ne reconnaît pas encore."
     },
     "workspaceListSections": {
       "all": "Tous",
