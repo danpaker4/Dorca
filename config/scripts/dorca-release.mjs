@@ -1,7 +1,8 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { planDorcaRelease, resolvePackageVersionConflict } from './dorca-release-plan.mjs'
+import { planDorcaRelease } from './dorca-release-plan.mjs'
+import { integrateOrcaRelease } from './dorca-upstream-integration.mjs'
 
 const REPO = 'danpaker4/Dorca'
 const METADATA = 'config/dorca-release.json'
@@ -73,25 +74,11 @@ if (process.argv[2] === 'prepare') {
   }
   git('config', 'user.name', 'github-actions[bot]')
   git('config', 'user.email', '41898282+github-actions[bot]@users.noreply.github.com')
-  git('fetch', '--no-tags', 'https://github.com/stablyai/orca.git', 'tag', next.upstreamTag)
-  const merge = spawnSync('git', ['merge', '--no-commit', '--no-ff', 'FETCH_HEAD'], {
-    stdio: 'inherit'
-  })
-  if (merge.error) {
-    throw merge.error
-  }
-  if (merge.status !== 0) {
-    const conflicts = git('diff', '--name-only', '--diff-filter=U').split(/\r?\n/)
-    if (conflicts.length !== 1 || conflicts[0] !== 'package.json') {
-      throw new Error(
-        `Orca integration needs manual conflict resolution: ${conflicts.join(', ')}. Nothing has been published.`
-      )
-    }
-    writeFileSync(
-      'package.json',
-      resolvePackageVersionConflict(readFileSync('package.json', 'utf8'))
-    )
-    git('add', 'package.json')
+  if (next.upstreamTag !== current.upstreamTag) {
+    git('fetch', '--no-tags', 'https://github.com/stablyai/orca.git', 'tag', current.upstreamTag)
+    const previousSha = git('rev-parse', 'FETCH_HEAD^{commit}')
+    git('fetch', '--no-tags', 'https://github.com/stablyai/orca.git', 'tag', next.upstreamTag)
+    integrateOrcaRelease(previousSha, git('rev-parse', 'FETCH_HEAD^{commit}'))
   }
   writeFileSync(METADATA, `${JSON.stringify(next, null, 2)}\n`)
   git('add', METADATA)

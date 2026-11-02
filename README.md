@@ -32,6 +32,8 @@ macOS has no prebuilt installer or automatic updates in this fork. Update the so
 
 The [Dorca Windows release workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-release.yml) checks daily for the latest **official stable Orca release**, integrates its exact tag, and builds and checks Dorca before publishing a complete Windows release. It does not pull unreleased Orca `main` commits onto users' computers.
 
+Integration applies the changes between the recorded Orca release and the new release, while keeping Dorca's workflow definitions. Build actions and application code still receive upstream changes; Orca's signing and publishing workflows are not copied over Dorca's automation.
+
 If the integration conflicts or validation fails, publication stops and installed copies keep working. Resolve the conflict in Dorca once, then rerun the workflow. The known package-version/branding conflict is handled automatically; other conflicting code is never silently discarded.
 
 To release your own Dorca changes, open that workflow, choose **Run workflow** on `main`, and optionally enter a new Dorca version such as `2.0.1`. Leaving the version blank increments the patch version. Normal commits do not trigger update popups. The workflow publishes the release only after the installer, blockmap and `latest.yml` are complete and their checksums match.

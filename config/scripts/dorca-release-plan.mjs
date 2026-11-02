@@ -15,7 +15,12 @@ export function planDorcaRelease(current, upstreamTag, requestedVersion, schedul
   if (!/^v\d+\.\d+\.\d+$/.test(upstreamTag)) {
     throw new Error('Only official stable Orca release tags can be integrated')
   }
-  parseStableVersion(upstreamTag.slice(1))
+  const upstream = parseStableVersion(upstreamTag.slice(1))
+  const previousUpstream = parseStableVersion(current.upstreamTag.slice(1))
+  const upstreamChange = upstream.findIndex((value, index) => value !== previousUpstream[index])
+  if (upstreamChange !== -1 && upstream[upstreamChange] < previousUpstream[upstreamChange]) {
+    throw new Error('Cannot move Dorca back to an older Orca release')
+  }
   const previous = parseStableVersion(current.version)
   if (scheduled && upstreamTag === current.upstreamTag) {
     return null

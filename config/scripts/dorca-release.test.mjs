@@ -34,6 +34,7 @@ describe('Dorca release integration', () => {
     })
     expect(() => planDorcaRelease(current, current.upstreamTag, '1.0.1')).toThrow('downgrade')
     expect(() => planDorcaRelease(current, 'main')).toThrow('stable')
+    expect(() => planDorcaRelease(current, 'v1.4.245')).toThrow('older Orca')
     expect(() => planDorcaRelease(current, 'v1.4.247-rc.1')).toThrow('stable')
   })
   it('preserves Dorca branding and unrelated package scripts across a version conflict', () => {
