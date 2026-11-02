@@ -10,9 +10,14 @@ import { updaterCodedMessage } from '../../shared/updater-failure-copy'
 import { QUIT_AND_INSTALL_DELAY_MS } from './updater-state'
 import { UpdaterRemoteStatus } from './updater-remote-status'
 import { prepareThisProcessShipItStaging } from './shipit-leftover-recovery'
+import { openDorcaMacRelease, usesDorcaMacManualUpdates } from './dorca-mac-manual-update'
 
 export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
   protected quitAndInstall(): void {
+    if (usesDorcaMacManualUpdates() && this.activeUpdateSource !== 'local') {
+      this.openManualMacUpdate(this.getPendingInstallVersion())
+      return
+    }
     if (
       this.localBuildSelectionInProgress ||
       this.pinnedBuildSelectionInProgress ||
@@ -73,6 +78,10 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
     if (!version) {
       return
     }
+    if (usesDorcaMacManualUpdates() && this.activeUpdateSource !== 'local') {
+      this.openManualMacUpdate(version)
+      return
+    }
     // Enforce host installability in main for older renderers and direct IPC callers.
     if (isExternallyManagedLinuxInstall()) {
       recordUpdaterLifecycle('linux_package_externally_managed_download_blocked', {
@@ -123,5 +132,14 @@ export abstract class UpdaterDownloadInstall extends UpdaterRemoteStatus {
 
   protected isQuittingForUpdate(): boolean {
     return this.quittingForUpdate
+  }
+
+  private openManualMacUpdate(version: string): void {
+    if (!version) {
+      return
+    }
+    void openDorcaMacRelease(version).catch((error: unknown) => {
+      this.sendErrorStatus(error instanceof Error ? error.message : String(error))
+    })
   }
 }

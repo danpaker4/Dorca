@@ -134,7 +134,7 @@ if (process.argv[2] === 'prepare') {
   const notes = join(process.env.RUNNER_TEMP, 'dorca-release-notes.md')
   writeFileSync(
     notes,
-    `Dorca ${release.version}, based on Orca ${release.upstreamTag}.\n\nWindows: download and run **dorca-windows-setup.exe**.\n\nFuture Dorca releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. macOS remains a source build; this release has no Mac installer.\n`
+    `Dorca ${release.version}, based on Orca ${release.upstreamTag}.\n\nWindows: download and run **dorca-windows-setup.exe**. Future Windows releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. Mac installers are added by the macOS build workflow after validation; Mac updates are installed manually.\n`
   )
   if (!existing) {
     gh(

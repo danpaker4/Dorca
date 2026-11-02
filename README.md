@@ -14,7 +14,17 @@
 
 Windows installers are currently unsigned, so Windows may show an unknown-publisher prompt.
 
-### 🍎 macOS (Build from Source)
+### 🍎 macOS
+
+1. Go to [**Dorca Releases**](https://github.com/danpaker4/Dorca/releases/latest).
+2. Download **`dorca-macos-arm64.dmg`** for Apple Silicon (M-series), or **`dorca-macos-x64.dmg`** for Intel.
+3. Open the DMG and drag **Dorca** into **Applications**. Quit an existing Dorca before replacing it.
+
+Mac builds have no Apple Developer ID signature or notarization. macOS may block the first launch; review the download and use **System Settings → Privacy & Security → Open Anyway** where permitted.
+
+Mac users receive an update notification when a newer Mac build is available. **Download** opens its release page; download the matching DMG and replace Dorca in Applications manually. Windows retains **Download → Update & Restart**.
+
+#### Build from source instead
 
 Open **Terminal** and run:
 
@@ -26,13 +36,15 @@ pnpm -C mobile install --frozen-lockfile
 pnpm run build:mac
 ```
 
-macOS has no prebuilt installer or automatic updates in this fork. Update the source and rebuild on your Mac. The Windows release workflow does not require Apple credentials.
+No Apple Developer credentials are needed for these Mac builds. Automatic installation of Mac updates through the standard updater is not enabled.
 
 ### Publishing and automatic Orca integration
 
 The [Dorca Windows release workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-release.yml) checks daily for the latest **official stable Orca release**, integrates its exact tag, and builds and checks Dorca before publishing a complete Windows release. It does not pull unreleased Orca `main` commits onto users' computers.
 
 Integration applies the changes between the recorded Orca release and the new release, while keeping Dorca's workflow definitions. Build actions and application code still receive upstream changes; Orca's signing and publishing workflows are not copied over Dorca's automation.
+
+After a successful Windows release run, the [macOS installers workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-mac-release.yml) builds Intel and Apple Silicon DMGs from the published tag. Mac update notifications become available only after both installers pass verification and are uploaded. A failed Mac build leaves Windows updates available and can be retried separately.
 
 If the integration conflicts or validation fails, publication stops and installed copies keep working. Resolve the conflict in Dorca once, then rerun the workflow. The known package-version/branding conflict is handled automatically; other conflicting code is never silently discarded.
 

@@ -1,0 +1,125 @@
+name: Dorca macOS installers
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Dorca release tag (draft allowed); blank selects the latest published release'
+        type: string
+        required: false
+  workflow_run:
+    workflows: ['Dorca Windows release']
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dorca-mac-release
+  cancel-in-progress: false
+
+env:
+  ORCA_BACKGROUND_LAUNCH: '1'
+  ORCA_PNPM_GLOBAL_VIRTUAL_STORE: '0'
+  CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+  NODE_OPTIONS: --max-old-space-size=4096
+
+jobs:
+  resolve:
+    if: >-
+      github.repository == 'danpaker4/Dorca' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_repository.full_name == 'danpaker4/Dorca'))
+    runs-on: ubuntu-latest
+    outputs:
+      needed: ${{ steps.plan.outputs.needed }}
+      tag: ${{ steps.plan.outputs.tag }}
+      version: ${{ steps.plan.outputs.version }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+      - name: Resolve the published Dorca release
+        id: plan
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DORCA_MAC_TAG: ${{ inputs.tag }}
+        run: node config/scripts/dorca-mac-release.mjs plan
+
+  build:
+    needs: resolve
+    if: needs.resolve.outputs.needed == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+          - runner: macos-15-intel
+            arch: x64
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          persist-credentials: false
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+      - uses: ./.github/actions/install-mobile-dependencies
+      - name: Check the Mac release configuration
+        run: pnpm exec vitest run --config config/vitest.config.ts --maxWorkers=2 config/scripts/dorca-mac-assets.test.mjs
+      - name: Build Dorca and its Mac native components
+        run: pnpm run build:release
+      - name: Package the Mac installer without Apple credentials
+        run: >-
+          pnpm exec electron-builder --config config/electron-builder.dorca-mac.config.cjs
+          --mac dmg --${{ matrix.arch }} --publish never
+      - name: Verify the DMG, app identity and native architecture
+        run: node config/scripts/verify-dorca-mac-installer.mjs
+      - name: Upload the verified installer
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.resolve.outputs.tag }}
+          MAC_ARCH: ${{ matrix.arch }}
+        run: gh release upload "$RELEASE_TAG" "dist/dorca-macos-$MAC_ARCH.dmg" --repo "$GITHUB_REPOSITORY" --clobber
+      - uses: actions/upload-artifact@v7
+        with:
+          name: dorca-macos-checksums-${{ matrix.arch }}
+          path: .build/dorca-mac/${{ matrix.arch }}.json
+          if-no-files-found: error
+          retention-days: 1
+
+  publish-notification:
+    needs: [resolve, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.resolve.outputs.tag }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: package.json
+          package-manager-cache: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: dorca-macos-checksums-*
+          merge-multiple: true
+          path: .build/dorca-mac
+      - name: Publish Mac update notifications and installation instructions
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DORCA_MAC_TAG: ${{ needs.resolve.outputs.tag }}
+        run: node config/scripts/dorca-mac-release.mjs publish

@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { loadUpdaterModule, warmUpdaterModule } from './updater-test-module-loader'
 import { updaterMainWindow } from './updater-test-main-window'
 
-const { autoUpdaterMock, fetchNewerReleaseTagsMock, moduleFactories, resetUpdaterMocks } =
+const { appMock, autoUpdaterMock, fetchNewerReleaseTagsMock, moduleFactories, resetUpdaterMocks } =
   await vi.hoisted(async () => (await import('./updater-test-harness')).createUpdaterMocks())
 
 vi.mock('electron', () => moduleFactories.electron())
@@ -22,6 +22,34 @@ warmUpdaterModule()
 
 describe('Dorca prebuilt updates', () => {
   beforeEach(resetUpdaterMocks)
+  const originalPlatform = process.platform
+  afterEach(() => Object.defineProperty(process, 'platform', { value: originalPlatform }))
+
+  it('shows the Mac update offer but opens its release page without native download or installation', async () => {
+    Object.defineProperty(process, 'platform', { value: 'darwin' })
+    appMock.getName.mockReturnValue('Dorca')
+    fetchNewerReleaseTagsMock.mockResolvedValue(['v2.0.1'])
+    const { shell } = await import('electron')
+    const updater = await loadUpdaterModule()
+    updater.setupAutoUpdater(updaterMainWindow(vi.fn()), { getLastUpdateCheckAt: () => Date.now() })
+    expect(autoUpdaterMock.autoInstallOnAppQuit).toBe(false)
+    updater.checkForUpdatesFromMenu()
+    await vi.waitFor(() => expect(autoUpdaterMock.checkForUpdates).toHaveBeenCalledOnce())
+    autoUpdaterMock.emit('checking-for-update')
+    autoUpdaterMock.emit('update-available', { version: '2.0.1' })
+    await vi.waitFor(() => expect(updater.getUpdateStatus().state).toBe('available'))
+    updater.downloadUpdate()
+    await vi.waitFor(() =>
+      expect(shell.openExternal).toHaveBeenCalledWith(
+        'https://github.com/danpaker4/Dorca/releases/tag/v2.0.1'
+      )
+    )
+    expect(autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled()
+    updater.quitAndInstall()
+    expect(autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled()
+    expect(appMock.quit).not.toHaveBeenCalled()
+    expect(updater.getUpdateStatus().state).toBe('available')
+  })
 
   it('pins the Dorca release and sends Download to electron-updater without a local source build', async () => {
     autoUpdaterMock.checkForUpdates.mockResolvedValue(undefined)
