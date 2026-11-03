@@ -18,5 +18,6 @@ module.exports = {
     artifactName: 'dorca-macos-${arch}.${ext}',
     target: ['dmg']
   },
+  dmg: { ...base.dmg, artifactName: 'dorca-macos-${arch}.${ext}' },
   publish: { ...base.publish, publishAutoUpdate: false }
 }

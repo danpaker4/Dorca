@@ -33,6 +33,17 @@ describe('unsigned Dorca Mac releases', () => {
     })
   })
 
+  it('uses the Dorca filename at the DMG target level where electron-builder gives it priority', () => {
+    const config = require('../electron-builder.dorca-mac.config.cjs')
+    require('app-builder-lib')
+    const { PlatformPackager } = require('app-builder-lib/out/platformPackager')
+    const { pattern } = PlatformPackager.prototype.artifactPatternConfig.call(
+      { config, platformSpecificBuildOptions: config.mac },
+      config.dmg
+    )
+    expect(pattern).toBe('dorca-macos-${arch}.${ext}')
+  })
+
   it('publishes notification metadata only when both uploaded DMGs match the verified builds', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'dorca-mac-release-'))
     directories.push(directory)

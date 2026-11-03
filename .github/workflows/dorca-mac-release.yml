@@ -61,7 +61,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: macos-15
+          - runner: macos-26
             arch: arm64
           - runner: macos-15-intel
             arch: x64
@@ -85,6 +85,7 @@ jobs:
       - name: Package the Mac installer without Apple credentials
         run: >-
           pnpm exec electron-builder --config config/electron-builder.dorca-mac.config.cjs
+          --config.dmg.artifactName='dorca-macos-${arch}.${ext}'
           --mac dmg --${{ matrix.arch }} --publish never
       - name: Verify the DMG, app identity and native architecture
         run: node config/scripts/verify-dorca-mac-installer.mjs
