@@ -1,3 +1,5 @@
+param([string]$RuntimePath = (Join-Path $PSScriptRoot '../../native/computer-use-windows/runtime.ps1'))
+
 $ErrorActionPreference = 'Stop'
 if ($env:CI -ne 'true' -or $env:RUNNER_OS -ne 'Windows') {
     throw 'Run this native-focus diagnostic only on an isolated Windows CI runner'
@@ -10,9 +12,9 @@ $probeProcess = $null
 try {
     Set-Content -LiteralPath $fixture -Encoding UTF8 -Value 'seed'
     Set-Content -LiteralPath $operationFile -Encoding UTF8 -Value '{"tool":"handshake"}'
-    $handshake = . (Join-Path $PSScriptRoot '../../native/computer-use-windows/runtime.ps1') -OperationPath $operationFile
+    $handshake = . $RuntimePath -OperationPath $operationFile
     if (-not ($handshake | ConvertFrom-Json).ok) { throw 'Provider handshake failed' }
-    $launched = Start-Process notepad.exe -ArgumentList ('"' + $fixture + '"') -WindowStyle Hidden -PassThru
+    $launched = Start-Process notepad.exe -ArgumentList ('"' + $fixture + '"') -PassThru
     $deadline = [DateTime]::UtcNow.AddSeconds(20)
     do {
         $probeProcess = Get-Process notepad -ErrorAction SilentlyContinue |
