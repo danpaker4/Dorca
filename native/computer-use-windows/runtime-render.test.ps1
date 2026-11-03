@@ -189,6 +189,9 @@ try {
     & (Join-Path $PSHOME "powershell.exe") -NoLogo -NoProfile -File (Join-Path $PSScriptRoot "runtime-pointer.test.ps1")
     if ($LASTEXITCODE -ne 0) { throw "Windows pointer tests failed" }
 
+    & (Join-Path $PSHOME "powershell.exe") -NoLogo -NoProfile -File (Join-Path $PSScriptRoot "runtime-text.test.ps1")
+    if ($LASTEXITCODE -ne 0) { throw "Windows text pattern tests failed" }
+
     Write-Output "windows-snapshot-render-tests-ok"
 } finally {
     Remove-Item -LiteralPath $operationPath -Force -ErrorAction SilentlyContinue

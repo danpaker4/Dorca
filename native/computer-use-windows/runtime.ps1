@@ -422,8 +422,13 @@ function Test-OrcaSensitiveElement($Element) {
 function Get-OrcaValueText($Element) {
     try {
         if (Test-OrcaSensitiveElement $Element) { return "[redacted]" }
-        $pattern = $Element.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
-        $rawValue = $pattern.Current.Value
+        try {
+            $pattern = $Element.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
+            $rawValue = $pattern.Current.Value
+        } catch {
+            $pattern = $Element.GetCurrentPattern([Windows.Automation.TextPattern]::Pattern)
+            $rawValue = $pattern.DocumentRange.GetText($TextLimit + 1)
+        }
         $text = if ($null -eq $rawValue) { "" } else { [string]$rawValue }
         if ($text.Length -gt $TextLimit) { return $text.Substring(0, $TextLimit) + "..." }
         $text
