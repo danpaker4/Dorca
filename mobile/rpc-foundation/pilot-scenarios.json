@@ -5780,6 +5780,10 @@
           "params": {
             "trustedOrcaHooks": {
               "repo-1": {
+                "setup": {
+                  "contentHash": "hash-1",
+                  "approvedAt": 1767225600000
+                },
                 "all": {
                   "approvedAt": 1767225600000
                 }
@@ -8929,6 +8933,83 @@
       ]
     },
     {
+      "id": "pr-line-comment-and-file-viewed",
+      "operation": "session.pr-mutations",
+      "family": "github.pr-comment-mutation",
+      "sites": ["mobile/src/session/github-pr-review-line-mutations.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "line-comment",
+          "id": "line-comment"
+        },
+        {
+          "complete": "github.addPRReviewComment#1",
+          "params": {
+            "repo": "id:repo-9",
+            "prNumber": 12,
+            "commitId": "head-sha-1",
+            "path": "src/app.ts",
+            "line": 5,
+            "body": "recorded line comment",
+            "startLine": 3
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "ok": true,
+              "comment": {
+                "id": 57
+              }
+            }
+          }
+        },
+        {
+          "checkpoint": "line-comment"
+        },
+        {
+          "action": "file-viewed",
+          "id": "viewed"
+        },
+        {
+          "complete": "github.setPRFileViewed#1",
+          "params": {
+            "repo": "id:repo-9",
+            "pullRequestId": "PR_kwDO",
+            "path": "src/app.ts",
+            "viewed": true
+          },
+          "reply": {
+            "ok": true,
+            "result": true
+          }
+        },
+        {
+          "checkpoint": "viewed"
+        },
+        {
+          "action": "file-viewed",
+          "id": "refused"
+        },
+        {
+          "complete": "github.setPRFileViewed#2",
+          "params": {
+            "repo": "id:repo-9",
+            "pullRequestId": "PR_kwDO",
+            "path": "src/app.ts",
+            "viewed": true
+          },
+          "reply": {
+            "ok": true,
+            "result": false
+          }
+        },
+        {
+          "checkpoint": "refused"
+        }
+      ]
+    },
+    {
       "id": "pr-comment-resolve-unconfirmed",
       "operation": "session.pr-mutations",
       "family": "github.pr-comment-mutation",
@@ -9857,6 +9938,82 @@
         },
         {
           "checkpoint": "no-compare"
+        }
+      ]
+    },
+    {
+      "id": "diff-review-commit-file-diff",
+      "operation": "session.diff-review-load",
+      "family": "session.diff-review",
+      "sites": [
+        "mobile/src/session/mobile-diff-review-loaders.ts",
+        "mobile/src/session/mobile-diff-review-commit-loader.ts"
+      ],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "commit-snapshot",
+          "id": "commit"
+        },
+        {
+          "complete": "git.commitCompare#1",
+          "params": {
+            "worktree": "id:repo-9::/w",
+            "commitId": "c0ffee0123456789abcdef0123456789abcdef01"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "summary": {
+                "commitOid": "c0ffee0123456789abcdef0123456789abcdef01",
+                "parentOid": "beef0123456789abcdef0123456789abcdef0123",
+                "compareRef": "c0ffee0",
+                "baseRef": "beef012",
+                "changedFiles": 1,
+                "status": "ready"
+              },
+              "entries": [
+                {
+                  "path": "src/app.ts",
+                  "status": "modified",
+                  "added": 2,
+                  "removed": 1
+                }
+              ]
+            }
+          }
+        },
+        {
+          "checkpoint": "commit"
+        },
+        {
+          "action": "diff",
+          "id": "commit-file",
+          "args": {
+            "scope": "commit"
+          }
+        },
+        {
+          "complete": "git.commitDiff#1",
+          "params": {
+            "worktree": "id:repo-9::/w",
+            "filePath": "src/app.ts",
+            "commitOid": "c0ffee0123456789abcdef0123456789abcdef01",
+            "parentOid": "beef0123456789abcdef0123456789abcdef0123"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "kind": "text",
+              "originalContent": "a\n",
+              "modifiedContent": "a\nb\n",
+              "originalIsBinary": false,
+              "modifiedIsBinary": false
+            }
+          }
+        },
+        {
+          "checkpoint": "commit-file"
         }
       ]
     },
@@ -15787,10 +15944,24 @@
           "id": "one"
         },
         {
+          "complete": "terminal.read#1",
+          "params": {
+            "terminal": "terminal-1",
+            "screen": true,
+            "limit": 1
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "terminal": {}
+            }
+          }
+        },
+        {
           "complete": "terminal.send#1",
           "params": {
             "terminal": "terminal-1",
-            "text": "\u0015",
+            "text": "\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b",
             "enter": false,
             "client": {
               "id": "device-token-1",
@@ -15843,10 +16014,24 @@
           "id": "two"
         },
         {
+          "complete": "terminal.read#1",
+          "params": {
+            "terminal": "terminal-1",
+            "screen": true,
+            "limit": 1
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "terminal": {}
+            }
+          }
+        },
+        {
           "complete": "terminal.send#1",
           "params": {
             "terminal": "terminal-1",
-            "text": "\u0015",
+            "text": "\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b",
             "enter": false,
             "client": {
               "id": "device-token-1",
@@ -15919,10 +16104,24 @@
           "id": "two"
         },
         {
+          "complete": "terminal.read#1",
+          "params": {
+            "terminal": "terminal-1",
+            "screen": true,
+            "limit": 1
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "terminal": {}
+            }
+          }
+        },
+        {
           "complete": "terminal.send#1",
           "params": {
             "terminal": "terminal-1",
-            "text": "\u0015",
+            "text": "\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b",
             "enter": false,
             "client": {
               "id": "device-token-1",
@@ -15975,10 +16174,24 @@
           "id": "trailing"
         },
         {
+          "complete": "terminal.read#1",
+          "params": {
+            "terminal": "terminal-1",
+            "screen": true,
+            "limit": 1
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "terminal": {}
+            }
+          }
+        },
+        {
           "complete": "terminal.send#1",
           "params": {
             "terminal": "terminal-1",
-            "text": "\u0015",
+            "text": "\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b",
             "enter": false,
             "client": {
               "id": "device-token-1",
@@ -18231,11 +18444,25 @@
           "id": "send-notes"
         },
         {
+          "complete": "terminal.read#1",
+          "params": {
+            "terminal": "terminal-1",
+            "screen": true,
+            "limit": 1
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "terminal": {}
+            }
+          }
+        },
+        {
           "complete": "terminal.send#1",
           "params": {
             "enter": false,
             "terminal": "terminal-1",
-            "text": "\u0015"
+            "text": "\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u0015\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b\u000b"
           },
           "reply": {
             "ok": true,
@@ -20195,8 +20422,7 @@
         {
           "complete": "git.status#1",
           "params": {
-            "worktree": "id:repo42::/p",
-            "includeLineStats": false
+            "worktree": "id:repo42::/p"
           },
           "reply": {
             "ok": true,
@@ -20291,9 +20517,9 @@
       ]
     },
     {
-      "id": "sc-history-commit-files",
-      "operation": "source-control.history-commit-files",
-      "family": "git.history-commit-files",
+      "id": "sc-history-branch-commits",
+      "operation": "source-control.history-branch-commits",
+      "family": "git.history-branch-commits",
       "sites": ["mobile/src/source-control/MobileGitHistoryList.tsx"],
       "schedules": [],
       "steps": [
@@ -20302,13 +20528,50 @@
           "id": "mount"
         },
         {
+          "checkpoint": "base-pending"
+        },
+        {
+          "complete": "worktree.show#1",
+          "params": {
+            "worktree": "id:repo42::/p"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "origin/main"
+              }
+            }
+          }
+        },
+        {
+          "complete": "repo.list#1",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": null
+                }
+              ]
+            }
+          }
+        },
+        {
           "checkpoint": "history-pending"
         },
         {
           "complete": "git.history#1",
           "params": {
             "worktree": "id:repo42::/p",
-            "limit": 50
+            "limit": 50,
+            "skip": 0,
+            "baseRef": "origin/main",
+            "branchOnly": true
           },
           "reply": {
             "ok": true,
@@ -20320,43 +20583,33 @@
                   "subject": "first",
                   "author": "dev",
                   "parentIds": ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
-                  "timestamp": 1767222000000
+                  "timestamp": 1767222000000,
+                  "pushed": false,
+                  "statistics": {
+                    "files": 2,
+                    "insertions": 13,
+                    "deletions": 1
+                  },
+                  "message": "first\n\nExplains the change.\n\nCo-authored-by: Pair <pair@example.test>"
                 }
-              ]
-            }
-          }
-        },
-        {
-          "action": "expand",
-          "id": "expand"
-        },
-        {
-          "checkpoint": "files-pending"
-        },
-        {
-          "complete": "git.commitCompare#1",
-          "params": {
-            "worktree": "id:repo42::/p",
-            "commitId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "entries": [
-                {
-                  "path": "src/app.ts",
-                  "added": 4,
-                  "removed": 1
+              ],
+              "hasMore": false,
+              "skip": 0,
+              "branch": {
+                "baseRef": {
+                  "id": "refs/remotes/origin/main",
+                  "name": "origin/main"
                 },
-                {
-                  "path": "src/other.ts",
-                  "status": "added",
-                  "added": 9,
-                  "removed": 0
-                }
-              ]
+                "ahead": 1,
+                "behind": 2,
+                "unpushed": 1
+              }
             }
           }
+        },
+        {
+          "action": "open",
+          "id": "open"
         },
         {
           "checkpoint": "settled"
@@ -22462,26 +22715,6 @@
         },
         {
           "checkpoint": "discarded"
-        },
-        {
-          "action": "stage-reviewed",
-          "id": "stage-reviewed"
-        },
-        {
-          "complete": "git.stage#2",
-          "params": {
-            "filePath": "src/app.ts",
-            "worktree": "id:workspace-1"
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "staged": true
-            }
-          }
-        },
-        {
-          "checkpoint": "swept"
         }
       ]
     },
@@ -22924,7 +23157,7 @@
       "id": "mobile-web-bundle-manifest-read",
       "operation": "mobileWeb.bundle-manifest",
       "family": "mobileWeb.bundle-manifest",
-      "sites": ["mobile/src/transport/mobile-web-bundle-operations.ts"],
+      "sites": ["mobile/src/transport/web-bundle/mobile-web-bundle-operations.ts"],
       "schedules": [],
       "steps": [
         {
@@ -22974,7 +23207,7 @@
       "operation": "mobileWeb.bundle-fetch",
       "family": "mobileWeb.bundle-fetch",
       "sites": [
-        "mobile/src/transport/mobile-web-bundle-fetch.ts",
+        "mobile/src/transport/web-bundle/mobile-web-bundle-fetch.ts",
         "mobile/src/diagnostics/use-mobile-web-bundle-probe.ts"
       ],
       "schedules": [],
@@ -23113,7 +23346,7 @@
       "operation": "mobileWeb.bundle-fetch",
       "family": "mobileWeb.bundle-fetch",
       "sites": [
-        "mobile/src/transport/mobile-web-bundle-fetch.ts",
+        "mobile/src/transport/web-bundle/mobile-web-bundle-fetch.ts",
         "mobile/src/diagnostics/use-mobile-web-bundle-probe.ts"
       ],
       "schedules": [],
@@ -23143,7 +23376,7 @@
       "operation": "mobileWeb.bundle-fetch",
       "family": "mobileWeb.bundle-fetch",
       "sites": [
-        "mobile/src/transport/mobile-web-bundle-fetch.ts",
+        "mobile/src/transport/web-bundle/mobile-web-bundle-fetch.ts",
         "mobile/src/diagnostics/use-mobile-web-bundle-probe.ts"
       ],
       "schedules": [],

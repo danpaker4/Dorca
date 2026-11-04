@@ -19,6 +19,7 @@ import type {
 } from './agent-session-options-result'
 import { labelFromModelId } from '../../model-id-label'
 import type { AgentSessionModelCatalogResult } from '../agent-session-wire'
+import { listingVerifiedModelIds } from './structured-agent-session-listing-verified-ids'
 import {
   decodeStructuredAgentSessionOptionValue,
   encodeStructuredAgentSessionOptionValue
@@ -64,6 +65,7 @@ export type StructuredAgentSessionOptionState = {
   reportedPermissionMode?: string | null
   permissionOwnSupported?: boolean | null
   reportedEffort?: string
+  /** The host is still listing models; it only keeps a seed from settling to built-in, since controls follow their data. */
   listingInProgress?: boolean
   fastModeRestricted?: boolean
 }
@@ -94,29 +96,6 @@ export function settleStructuredAgentSessionBuiltinCatalog(
     : { ...state, catalogSource, listingInProgress }
 }
 
-function isListedModelRow(row: unknown): row is { id: string } {
-  return (
-    typeof row === 'object' &&
-    row !== null &&
-    'id' in row &&
-    typeof row.id === 'string' &&
-    'efforts' in row &&
-    Array.isArray(row.efforts)
-  )
-}
-
-/** The ids a finished listing names; undefined for one still running, failed, empty or malformed. */
-export function finishedListingIds(catalog: AgentSessionModelCatalogResult): string[] | undefined {
-  const rows: unknown = catalog.origin === 'unknown' ? null : catalog.models
-  return Array.isArray(rows) &&
-    rows.length > 0 &&
-    rows.every(isListedModelRow) &&
-    !catalog.listingInProgress &&
-    !catalog.unavailable
-    ? rows.map((row) => row.id)
-    : undefined
-}
-
 /** Install models only; no record writes or committed picks until an options result confirms them. */
 export function applyStructuredAgentSessionModelCatalog(
   state: StructuredAgentSessionOptionState,
@@ -145,6 +124,7 @@ export function applyStructuredAgentSessionModelCatalog(
   const namesDefault =
     options.newLaunch &&
     (catalog.listingNamesConfiguredModel ?? seed.hostListingNamesConfiguredModel === true)
+  const verifiedModelIds = listingVerifiedModelIds(state.verifiedModelIds, catalog, models)
   return {
     ...state,
     // Real-listing defaults are nameable but provisional, never confirmed picks.
@@ -153,12 +133,12 @@ export function applyStructuredAgentSessionModelCatalog(
       models,
       ...(namesDefault ? { defaultModelIsCliDefault: true } : {})
     },
-    ...(installed ? { verifiedModelIds: finishedListingIds(catalog) } : {}),
+    ...(installed ? { verifiedModelIds } : {}),
     catalogSource: state.catalogSource === 'live' ? 'live' : 'host',
     acceptedInputSources: state.optionsAnswerPresent
       ? state.acceptedInputSources
       : {
-          ...(namesDefault ? { model: 'policy', effort: 'policy' } : {}),
+          ...(namesDefault ? { model: 'policy' } : {}),
           fastMode: 'policy',
           ...Object.fromEntries(
             Object.entries(state.acceptedInputSources ?? {}).filter(
@@ -177,6 +157,12 @@ export function applyStructuredAgentSessionOptions(
   launch: { newLaunch: boolean; coherentCatalog?: boolean } = { newLaunch: false }
 ): StructuredAgentSessionOptionState {
   const { current } = result
+  let acceptedInputSources = current.acceptedInputSources
+  const policyEffort = acceptedInputSources?.effort === 'policy'
+  if (policyEffort) {
+    acceptedInputSources = { ...acceptedInputSources }
+    delete acceptedInputSources.effort
+  }
   const installed = usesInstalledAgentModelCatalog(state.record.agent, launch.coherentCatalog)
   const keepCatalog = installed || result.modelsKnown === false
   // Catalog defaults supply picker context without claiming the chat chose them.
@@ -184,7 +170,7 @@ export function applyStructuredAgentSessionOptions(
     state.record,
     {
       ...(current.model ? { model: current.model } : {}),
-      ...(current.effort ? { effort: current.effort } : {}),
+      ...(!policyEffort && current.effort ? { effort: current.effort } : {}),
       ...(current.fastMode !== undefined ? { fastMode: current.fastMode } : {}),
       ...(current.serviceTier ? { serviceTier: current.serviceTier } : {})
     },
@@ -217,7 +203,7 @@ export function applyStructuredAgentSessionOptions(
         : installed && state.catalogSource === 'seed'
           ? 'seed'
           : 'live',
-    acceptedInputSources: current.acceptedInputSources,
+    acceptedInputSources,
     olderHost: current.defaulted === undefined ? true : undefined,
     defaultsUnsent: current.defaulted !== undefined && !launch.newLaunch ? true : undefined,
     verifiedModelIds: keepCatalog
@@ -238,6 +224,16 @@ function structuredAgentSessionControlsModelId(
     ? structuredAgentSessionShownModel(state.catalog, state.catalog.models, state.record)
         .controlsModelId
     : null
+}
+
+/** Runtime reports describe the process whose options answer carried them; a newer fence has none until it answers. */
+export function structuredAgentSessionReportsAtFence<
+  T extends Pick<StructuredAgentSessionOptionState, 'reportedPermissionMode' | 'reportedEffort'>
+>(state: T, answeredFence: number | null | undefined, fence: number | null): T {
+  return answeredFence === fence ||
+    (state.reportedPermissionMode === undefined && state.reportedEffort === undefined)
+    ? state
+    : { ...state, reportedPermissionMode: undefined, reportedEffort: undefined }
 }
 
 export function commitStructuredAgentSessionOption(

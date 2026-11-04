@@ -69,12 +69,12 @@ jobs:
           config/scripts/dorca-mac-assets.test.mjs
           config/scripts/dorca-upstream-integration.test.mjs
           config/scripts/electron-builder-config.test.mjs
-          src/main/updater-prerelease-feed.test.ts
-          src/main/updater-prerelease-feed-readiness.test.ts
-          src/main/updater-release-builds.test.ts
-          src/main/updater.check-preflight.test.ts
-          src/main/updater.quit-and-install.test.ts
-          src/main/updater.dorca-release.test.ts
+          src/main/updater/releases/updater-prerelease-feed.test.ts
+          src/main/updater/releases/updater-prerelease-feed-readiness.test.ts
+          src/main/updater/releases/updater-release-builds.test.ts
+          src/main/updater/updater.check-preflight.test.ts
+          src/main/updater/updater.quit-and-install.test.ts
+          src/main/updater/updater.dorca-release.test.ts
           src/shared/release-channel.test.ts
 
       - name: Typecheck the integrated application
