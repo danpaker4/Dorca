@@ -22,8 +22,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  cadence:
     if: github.repository == 'danpaker4/Dorca' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      should_check: ${{ steps.cadence.outputs.result }}
+    steps:
+      - uses: actions/github-script@v8
+        id: cadence
+        with:
+          script: |
+            // UTC days keep the 72-hour cadence across month boundaries.
+            const utcDay = Math.floor(Date.now() / 86_400_000)
+            return context.eventName !== 'schedule' || utcDay % 3 === 0
+
+  release:
+    needs: cadence
+    if: needs.cadence.outputs.should_check == 'true'
     runs-on: windows-2025
     timeout-minutes: 90
     defaults:

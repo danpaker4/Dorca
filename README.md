@@ -40,7 +40,7 @@ No Apple Developer credentials are needed for these Mac builds. Automatic instal
 
 ### Publishing and automatic Orca integration
 
-The [Dorca Windows release workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-release.yml) checks daily for the latest **official stable Orca release**, integrates its exact tag, and builds and checks Dorca before publishing a complete Windows release. It does not pull unreleased Orca `main` commits onto users' computers.
+The [Dorca Windows release workflow](https://github.com/danpaker4/Dorca/actions/workflows/dorca-release.yml) checks every 72 hours for the latest **official stable Orca release**, integrates its exact tag, and builds and checks Dorca before publishing a complete Windows release. It does not pull unreleased Orca `main` commits onto users' computers.
 
 Integration applies the changes between the recorded Orca release and the new release, while keeping Dorca's workflow definitions. Build actions and application code still receive upstream changes; Orca's signing and publishing workflows are not copied over Dorca's automation.
 
