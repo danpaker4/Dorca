@@ -1,6 +1,10 @@
+import type { FileOpenFailure } from './terminal-file-open-failure'
 import { downloadAndOpenRemoteTerminalFile } from './terminal-remote-file-download-open'
 import { findWorkspaceFileRoute } from '@/lib/runtime-workspace-file-route'
-import { isPathInsideWorktree, toWorktreeRelativePath } from '../../../../shared/terminal-links'
+import {
+  isPathInsideWorktree,
+  toWorktreeRelativePath
+} from '../../../../shared/terminal/links/terminal-links'
 import { isMissingRuntimePathError } from '@/runtime/runtime-file-metadata-client'
 import { useAppStore } from '@/store'
 import { activateAndRevealWorkspace, activateAndRevealWorktree } from '@/lib/worktree-activation'
@@ -49,12 +53,6 @@ import {
 } from '@/lib/http-link-destinations'
 import { isHtmlFilePath, localHtmlFileDestinations } from './local-html-file-destinations'
 
-export type FileOpenFailure = {
-  /** `missing` is a verified absence; `unverifiable` means the host could not answer (dropped SSH, timeout, denied path). */
-  verdict: 'missing' | 'unverifiable'
-  error: unknown
-}
-
 type TerminalFileOpenDeps = {
   worktreeId: string
   worktreePath: string
@@ -71,7 +69,7 @@ type TerminalFileOpenDeps = {
   onOpenFailure?: (failure: FileOpenFailure) => void
   /** The tab that owns the link; editor opens place themselves relative to its group. */
   sourceTabId?: string | null
-  /** "Open in this group": pins the source tab's group at activation, or refuses. */
+  /** "Open in new tab": pins the source tab's group at activation, or refuses. */
   openInSourceGroup?: boolean
   /** Opt-in menu request; the legacy flag remains editor-only. */
   openInSourceGroupSurface?: 'internal' | 'browser'
@@ -228,11 +226,12 @@ export function openDetectedFilePath(
       return
     }
 
-    // Why: a granted file is readable only through its grant, so it opens in Orca, never as a download.
-    if (openWithSystemDefault && !canOpenWithSystemDefault && hostGrant === null) {
-      // Shift+Cmd/Ctrl must match popover’s Download & open with default app; OS cannot directly launch remote paths.
-      await downloadAndOpenRemoteTerminalFile(fileContext, mappedFilePath)
-      return
+    // Shift+Cmd/Ctrl must match popover’s Download & open with default app; OS cannot directly launch remote paths.
+    if (openWithSystemDefault && !canOpenWithSystemDefault) {
+      const download = { grant: hostGrant, isCurrent: isCurrentRequest }
+      if (await downloadAndOpenRemoteTerminalFile(fileContext, mappedFilePath, download)) {
+        return
+      }
     }
 
     // Route local HTML to Orca browser, including system-browser opens OS could not launch.
@@ -281,6 +280,9 @@ export function openDetectedFilePath(
     } else if (
       hostGrant === null &&
       !isFloatingWorkspaceId(worktreeId) &&
+      // Why: a local file opens in the workspace it was clicked in, even if another holds it open;
+      // owner-scoped tab ids keep both tabs, and the editor reads local absolute paths directly.
+      targetExecutionHostId !== LOCAL_EXECUTION_HOST_ID &&
       store.openFiles.some(
         (openFile) => openFile.filePath === mappedFilePath && openFile.worktreeId !== worktreeId
       )

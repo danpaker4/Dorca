@@ -26,13 +26,13 @@ vi.mock('../ssh/ssh', () => ({
 import { registerAiVaultSearchHandlers } from './ai-vault-search'
 import { aiVaultApi } from '../../../preload/api/ai-vault-bridge'
 import { setSessionSearchService } from '../../ai-vault-search/session-search-service-registry'
-import { unavailableSessionSearchStatus } from '../../../shared/ai-vault-search-client'
-import { AI_VAULT_AGENTS } from '../../../shared/ai-vault-types'
+import { unavailableSessionSearchStatus } from '../../../shared/ai-vault/search/ai-vault-search-client'
+import { AI_VAULT_AGENTS } from '../../../shared/ai-vault/contracts/ai-vault-types'
 import {
   fakeSearchService,
   searchHit,
   searchResults
-} from '../../../shared/ai-vault-search-test-fixture'
+} from '../../../shared/ai-vault/search/ai-vault-search-test-fixture'
 import { agentSessionRecordFixture } from '../../../shared/agent-session/lifecycle/agent-session-record.test-fixture'
 import { codexProviderHandle } from '../../../shared/agent-session/lifecycle/agent-session-provider-handle-encoding'
 import { setStructuredAgentSessionHost } from '../../native-chat/agent-session-wire/structured-agent-session-registry'
@@ -98,10 +98,16 @@ describe('desktop IPC and preload search boundary', () => {
       supportsQoderHistory: true,
       supportsJcodeHistory: true
     })
+    // The paired host's answer keeps what Resume in New Tab needs.
     expect(result).toMatchObject({
-      hits: [{ executionHostId: 'runtime:env-1', source: { presence: 'present' } }]
+      hits: [
+        {
+          executionHostId: 'runtime:env-1',
+          source: { presence: 'present', filePath: '/host/transcript.jsonl' },
+          resumeCommand: 'host-resume-command'
+        }
+      ]
     })
-    expect(JSON.stringify(result)).not.toContain('/host/transcript.jsonl')
     expect(local.search).not.toHaveBeenCalled()
     runtimeSearch.mockResolvedValue(unavailableSessionSearchStatus())
     expect(await aiVaultApi.searchStatus('runtime:env-1')).toEqual(unavailableSessionSearchStatus())
@@ -132,9 +138,13 @@ describe('desktop IPC and preload search boundary', () => {
         result.kind === 'results'
           ? result.hits.filter((hit) => hit.executionHostId !== 'local')
           : []
-      expect(remoteHits).toMatchObject([{ agent: 'jcode', source: { presence: 'present' } }])
-      expect(JSON.stringify(remoteHits)).not.toContain('/host/transcript')
-      expect(JSON.stringify(remoteHits)).not.toContain('resumeCommand')
+      expect(remoteHits).toMatchObject([
+        {
+          agent: 'jcode',
+          source: { presence: 'present', filePath: '/host/transcript.jsonl' },
+          resumeCommand: 'host-resume-command'
+        }
+      ])
       expect(local.search).not.toHaveBeenCalled()
       expect(scope === 'runtime:env-1' ? sshSearch : runtimeSearch).not.toHaveBeenCalled()
     }

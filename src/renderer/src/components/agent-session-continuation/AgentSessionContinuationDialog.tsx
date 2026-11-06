@@ -5,10 +5,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Loader2, MessageSquarePlus } from 'lucide-react'
 import { AgentLaunchPicker } from '@/components/agent/AgentLaunchPicker'
 import {
-  agentPickerLaunchInputs,
+  agentPickerFreshLaunchInputs,
   type AgentPickerDraft,
   type AgentPickerEntry
-} from '../../../../shared/agent-launch-picker'
+} from '../../../../shared/agent-launch/picker/agent-launch-picker'
 import { useAgentMenuObservation } from '@/components/tab-bar/use-new-tab-agent-menu-rows'
 import { useAgentDetectionTargetForWorktree } from '@/hooks/useAgentDetectionTarget'
 import type { AgentLaunchSurface } from '@/lib/agent-session-launch-plan'
@@ -38,8 +38,8 @@ import {
 } from '@/lib/agent-session-continuation'
 import { launchAgentSessionContinuation } from '@/lib/launch-agent-session-continuation'
 import { useAppStore } from '@/store'
-import { isTuiAgentEnabled } from '../../../../shared/tui-agent-selection'
-import type { TuiAgent } from '../../../../shared/tui-agent'
+import { isTuiAgentEnabled } from '../../../../shared/agent-launch/catalog/tui-agent-selection'
+import type { TuiAgent } from '../../../../shared/agent-launch/catalog/tui-agent'
 import {
   chooseInitialContinuationAgent,
   isContinuationAgentAllowed
@@ -174,7 +174,14 @@ export function AgentSessionContinuationDialog({
   }, [starting])
 
   const handleStart = async (): Promise<void> => {
-    if (!request || detecting || !selectedAgent || starting || !selection.ready) {
+    if (
+      !request ||
+      detecting ||
+      !selectedAgent ||
+      starting ||
+      !selection.ready ||
+      !selection.choice
+    ) {
       return
     }
     const prompt = buildAgentSessionContinuationPrompt(request.source, contextMode)
@@ -189,7 +196,16 @@ export function AgentSessionContinuationDialog({
       groupId: request.groupId,
       initialCwd: request.initialCwd,
       launchChoice: selection.choice,
-      ...(currentPick?.draft ? agentPickerLaunchInputs(currentPick.draft, currentPick.entry) : {}),
+      ...(currentPick?.draft
+        ? agentPickerFreshLaunchInputs(
+            currentPick.draft,
+            {
+              surface: selection.choice.route === 'terminal-tui' ? 'terminal' : 'chat',
+              executionHostId: selection.choice.executionHostId
+            },
+            currentPick.entry
+          )
+        : {}),
       launchSource: request.launchSource,
       signal: abortRef.current?.signal
     })

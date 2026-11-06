@@ -1,5 +1,5 @@
 import { readableWslDistroHoldText } from '../../shared/wsl-distro-stopped-hold'
-import { canCheckoutExistingLocalBranch } from '../runtime/runtime-worktree-create-git'
+import { canCheckoutExistingLocalBranch } from '../runtime/workspaces/creation/runtime-worktree-create-git'
 /* eslint-disable max-lines */
 
 import { worktreeCreateGit } from '../git/worktrees/creation/worktree-create-git-executor'
@@ -46,11 +46,11 @@ import { getHostedReviewForBranch } from '../source-control/hosted-review'
 import type { ForgeProviderId } from '../source-control/forge-provider'
 import { validateGitPushTarget } from '../git/push-target-validation'
 import { gitExecFileAsync } from '../git/runner'
+import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import type {
-  OrcaRuntimeService,
   RemoteFetchResult,
   RemoteTrackingBase
-} from '../runtime/orca-runtime'
+} from '../runtime/repositories/runtime-remote-fetch-controller'
 import { getProjectHostSetupWorktreeMeta } from '../../shared/project-host-setup-lookup'
 import { getEffectiveHooks, loadHooks } from '../workspace-hooks/hooks'
 import {
@@ -62,7 +62,7 @@ import {
   getEffectiveHooksFromConfig,
   shouldRunSetupForCreate
 } from '../workspace-hooks/effective-hook-config'
-import { isTuiAgent } from '../../shared/tui-agent-config'
+import { isTuiAgent } from '../../shared/agent-launch/catalog/tui-agent-config'
 import { runWorktreeChangeInvalidators } from './worktrees/listing/worktree-change-invalidators'
 
 type CreateWorktreeArgsWithSystemProvenance = CreateWorktreeArgs & {
@@ -91,7 +91,7 @@ import {
   getRepoExecutionHostId,
   type ExecutionHostId
 } from '../../shared/execution-host'
-import type { BranchPrefixSettings } from '../../shared/branch-prefix'
+import type { BranchPrefixSettings } from '../../shared/git/branches/branch-prefix'
 import { parseWorkspaceKey, worktreeWorkspaceKey } from '../../shared/workspace-scope'
 import { sharesWorktreeLineageBoundary } from '../../shared/resolved-worktree-lineage'
 import {
