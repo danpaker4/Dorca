@@ -1,4 +1,5 @@
 import type * as Monaco from 'monaco-editor'
+import { translate } from '@/i18n/i18n'
 import type { editor } from 'monaco-editor'
 import { useAppStore } from '@/store'
 import { findWorktreeById } from '@/store/slices/worktree-helpers'
@@ -73,7 +74,7 @@ export function registerEditorInstanceForTsWorkspace(
 
   const findAllReferencesAction = editorInstance.addAction({
     id: 'dorca.findAllReferences',
-    label: 'Find All References',
+    label: translate('dorca.findAllReferences', 'Find All References'),
     keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.F12],
     contextMenuGroupId: 'navigation',
     contextMenuOrder: 1.4,

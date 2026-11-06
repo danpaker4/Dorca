@@ -2596,7 +2596,7 @@
       },
       "Landing": {
         "f9eaa9e12d": "Add project",
-        "6ca6ff404e": "ORCA",
+        "6ca6ff404e": "DORCA",
         "520304a067": "Orca logo",
         "c1cf168479": "Hide",
         "00cee697c1": "Run \"gh auth login\" in a terminal to connect your GitHub account.",
@@ -23952,5 +23952,8 @@
     "discussionAction": "Join the discussion",
     "checkAction": "Check compatibility",
     "settingsStatus": "Orca {{version}} requires macOS {{macos}} or later. This is the latest version for this Mac."
+  },
+  "dorca": {
+    "findAllReferences": "Find All References"
   }
 }
