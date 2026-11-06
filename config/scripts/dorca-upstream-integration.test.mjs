@@ -35,6 +35,43 @@ async function repository() {
 }
 
 describe('official Orca release integration', () => {
+  it('integrates release patches larger than the child-process output buffer', async () => {
+    const repo = await repository()
+    await repo.write('feature.txt', 'original\n')
+    const previousSha = repo.commit('base release')
+    repo.git('switch', '-c', 'upstream')
+    await repo.write('large-release.txt', Buffer.alloc(65 * 1024 * 1024, 'a'))
+    await repo.write('asset.bin', Buffer.from([0, 255, 1, 254]))
+    const nextSha = repo.commit('large Orca release')
+    repo.git('switch', 'main')
+
+    integrateOrcaRelease(previousSha, nextSha, repo.cwd)
+
+    expect(repo.git('diff', '--cached', '--name-only').split(/\r?\n/)).toEqual([
+      'asset.bin',
+      'large-release.txt'
+    ])
+    expect(repo.git('diff', '--cached', '--name-only', nextSha)).toBe('')
+    expect(repo.git('diff', '--name-only')).toBe('')
+  })
+
+  it('leaves the checkout unchanged when a release only changes upstream workflows', async () => {
+    const repo = await repository()
+    await repo.write('.github/workflows/build.yml', 'Dorca workflow')
+    const previousSha = repo.commit('base release')
+    repo.git('switch', '-c', 'upstream')
+    await repo.write('.github/workflows/build.yml', 'Orca signing workflow')
+    const nextSha = repo.commit('next Orca release')
+    repo.git('switch', 'main')
+
+    integrateOrcaRelease(previousSha, nextSha, repo.cwd)
+
+    expect(repo.git('status', '--porcelain')).toBe('')
+    expect(await readFile(join(repo.cwd, '.github/workflows/build.yml'), 'utf8')).toBe(
+      'Dorca workflow'
+    )
+  })
+
   it('combines source changes while retaining Dorca workflows without importing upstream workflow history', async () => {
     const repo = await repository()
     const source = `upstream = 1\n${'unchanged\n'.repeat(12)}dorca = false\n`
