@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-pnpm exec lint-staged
+pnpm exec lint-staged --concurrent 2 --relative --max-arg-length 24000

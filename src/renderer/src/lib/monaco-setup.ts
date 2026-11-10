@@ -32,6 +32,7 @@ import { installMonacoContextMenuPaste } from '@/components/editor/install-monac
 import { installMonacoTypeScriptWorkspaceIntelligence } from '@/components/editor/monaco-ts-workspace-intelligence'
 import { runMonacoSetupSteps } from './monaco-setup-steps'
 import { installMonacoTsWorkerIdleStop } from './monaco-ts-worker-idle-stop'
+import { onPluginFontLoadsChanged } from '@/store/plugins/appearance/plugin-fonts'
 
 globalThis.MonacoEnvironment = {
   getWorker(_workerId, label) {
@@ -98,7 +99,9 @@ runMonacoSetupSteps([
   // Sandboxed navigator.clipboard blocks Monaco Paste; use trusted IPC as native Cmd+V does.
   ['context-menu paste', () => installMonacoContextMenuPaste(monaco)],
   ['TS workspace intelligence', () => installMonacoTypeScriptWorkspaceIntelligence(monaco)],
-  ['TS worker idle stop', () => installMonacoTsWorkerIdleStop(monaco)]
+    ['TS worker idle stop', () => installMonacoTsWorkerIdleStop(monaco)],
+  // Monaco caches glyph widths, so a plugin font that loads after first paint must re-measure.
+  ['plugin font remeasure', () => onPluginFontLoadsChanged(() => monaco.editor.remeasureFonts())]
 ])
 
 loader.config({ monaco })

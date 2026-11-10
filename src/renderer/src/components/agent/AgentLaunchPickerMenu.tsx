@@ -1,11 +1,14 @@
-import { selectWorktreesByRepo, selectFolderWorkspaces } from '@/store/workspace-record-selectors'
+import {
+  selectWorktreesByRepo,
+  selectFolderWorkspaces
+} from '@/store/workspaces/catalog/workspace-record-fields'
 import { useEffect, useRef, useState, type ComponentProps, type Ref } from 'react'
 import { useAppStore } from '@/store/index'
 import { parseExecutionHostId } from '../../../../shared/execution-host'
 import { Input } from '@/components/ui/input'
 import { AgentPickerMenuRow, type AgentPickerMenuLaunch } from './AgentLaunchPickerMenuRow'
 import { DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { translate } from '@/i18n/i18n'
+import { useTranslate } from '@/i18n/use-translate'
 import { retireAgentPickerDrafts, type AgentPickerSetupIdentity } from './AgentLaunchSetupButton'
 import type { NewTabAgentMenuModel } from '../tab-bar/use-new-tab-agent-menu-rows'
 import {
@@ -19,6 +22,7 @@ import type {
 } from '../../../../shared/agent-launch/picker/agent-launch-picker'
 
 export function AgentLaunchPickerMenu({
+  model,
   draftScope,
   shortcutLabels,
   disabled,
@@ -54,6 +58,7 @@ export function AgentLaunchPickerMenu({
   defaultAgent?: AgentPickerEntry['agent'] | 'blank' | null
   onSetDefault?: (agent: AgentPickerEntry['agent']) => void
 }) {
+  const t = useTranslate()
   useEffect(() => {
     if (setupDisabled) {
       return
@@ -82,6 +87,7 @@ export function AgentLaunchPickerMenu({
       mode
     )
   }, [entries, draftScope, mode, setupDisabled])
+  const terminalBlocked = mode !== 'select' && model?.state === 'settled' && model.terminalPending
   const [query, setQuery] = useState(initialQuery)
   const [searchFocused, setSearchFocused] = useState(false)
   const [activeSetup, setActiveSetup] = useState<{
@@ -130,8 +136,9 @@ export function AgentLaunchPickerMenu({
   }
   // Why: Enter in the search picks the first enabled row, so show it highlighted like cmdk comboboxes.
   const enabled = (entry: AgentPickerEntry) => !disabled && entry.surfaces.length > 0
-  const firstSetup = setups.find((setup) => enabled(setup.entry))
-  const firstEntry = firstSetup ? undefined : visible.find(enabled)
+  // Why: a query naming an agent should surface that agent before other agents’ model setups.
+  const firstEntry = visible.find(enabled)
+  const firstSetup = firstEntry ? undefined : setups.find((setup) => enabled(setup.entry))
   const showSearchDefault = searchFocused && query.trim().length > 0
   return (
     <div ref={root} data-agent-launch-picker="true">
@@ -149,7 +156,7 @@ export function AgentLaunchPickerMenu({
               const end = event.currentTarget.value.length
               event.currentTarget.setSelectionRange(end, end)
             }}
-            placeholder={translate('agentPicker.search', 'Search agents and setups…')}
+            placeholder={t('agentPicker.search', 'Search agents and setups…')}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === 'Escape') {
@@ -172,6 +179,30 @@ export function AgentLaunchPickerMenu({
         </div>
       ) : null}
       <div className="max-h-64 overflow-y-auto scrollbar-sleek">
+        {visible.map((entry) => {
+          const source = draftForEntry?.(entry)
+          return (
+            <AgentPickerMenuRow
+              key={entry.agent}
+              draftScope={draftScope}
+              entry={entry}
+              mode={mode}
+              searchDefault={showSearchDefault && entry === firstEntry}
+              source={source}
+              selected={value?.agent === entry.agent ? value : undefined}
+              setupDisabled={setupDisabled}
+              openSetup={openSetup}
+              onSetupOpenChange={setActiveSetup}
+              disabled={disabled}
+              terminalBlocked={terminalBlocked}
+              runLaunch={runLaunch}
+              onSelectAgent={onSelectAgent}
+              isDefault={defaultAgent === entry.agent}
+              onSetDefault={onSetDefault}
+              shortcut={mode !== 'select' ? shortcutLabels?.get(entry.agent) : undefined}
+            />
+          )
+        })}
         {setups.map((setup) => {
           const source = draftForEntry?.(setup.entry)
           return (
@@ -192,39 +223,14 @@ export function AgentLaunchPickerMenu({
               selected={value?.agent === setup.entry.agent ? value : undefined}
               onSelectAgent={onSelectAgent}
               disabled={disabled}
+              terminalBlocked={terminalBlocked}
               runLaunch={runLaunch}
-            />
-          )
-        })}
-        {visible.map((entry) => {
-          const source = draftForEntry?.(entry)
-          return (
-            <AgentPickerMenuRow
-              key={entry.agent}
-              draftScope={draftScope}
-              entry={entry}
-              mode={mode}
-              searchDefault={showSearchDefault && entry === firstEntry}
-              source={source}
-              selected={value?.agent === entry.agent ? value : undefined}
-              setupDisabled={setupDisabled}
-              openSetup={openSetup}
-              onSetupOpenChange={setActiveSetup}
-              disabled={disabled}
-              runLaunch={runLaunch}
-              onSelectAgent={onSelectAgent}
-              isDefault={defaultAgent === entry.agent}
-              onSetDefault={onSetDefault}
-              shortcut={mode !== 'select' ? shortcutLabels?.get(entry.agent) : undefined}
             />
           )
         })}
         {!visible.length && !setups.length ? (
           <DropdownMenuItem disabled>
-            {translate(
-              'auto.components.agent.AgentCombobox.579c768bde',
-              'No agents match your search.'
-            )}
+            {t('auto.components.agent.AgentCombobox.579c768bde', 'No agents match your search.')}
           </DropdownMenuItem>
         ) : null}
       </div>

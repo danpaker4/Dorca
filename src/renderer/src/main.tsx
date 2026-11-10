@@ -22,7 +22,7 @@ import { installAppKeyboardRouter } from './lib/app-keyboard-router'
 import { installWorkspaceNavigationHistory } from './lib/workspace-navigation-history'
 import { shouldEnableReactGrab } from './lib/react-grab-dev-gate'
 import { I18nProvider } from './i18n/I18nProvider'
-import { translate } from './i18n/i18n'
+import { useTranslate } from './i18n/use-translate'
 import { getOrCreateRendererRoot } from './lib/react-renderer-root'
 import { primeTerminalWebglAddon } from './lib/pane-manager/pane-webgl-renderer'
 import { SkillWarningPreviewLauncher } from './components/skills/SkillWarningPreviewLauncher'
@@ -73,13 +73,14 @@ if (!rootElement) {
 }
 
 function RendererRoot(): React.JSX.Element {
+  const t = useTranslate()
   useTranslation()
   return (
     <RecoverableRenderErrorBoundary
       boundaryId="app.root"
       surface="app-root"
-      title={translate('app.recoverableError.rootTitle', 'Orca hit a renderer error.')}
-      description={translate(
+      title={t('app.recoverableError.rootTitle', 'Orca hit a renderer error.')}
+      description={t(
         'app.recoverableError.rootDescription',
         'The app shell could not finish rendering. Retry to remount it, or relaunch Orca if the error persists.'
       )}

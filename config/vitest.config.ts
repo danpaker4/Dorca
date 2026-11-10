@@ -15,14 +15,13 @@ import { nodeRuntimePool } from './scripts/test-runtime/node-worker/vitest-node-
 import { readRunFilters } from './scripts/test-runtime/execution-policy/vitest-run-filters.mjs'
 import { createWorkspaceSourceResolver } from './scripts/workspace/source-exports/workspace-source-exports.mjs'
 import { moduleCacheResolutionKey } from './scripts/test-runtime/module-cache/vitest-module-cache-resolution-key'
+import { vitestReactCompiler } from './build-plugins/vitest-react-compiler'
 
 const nodeRuntimeInclude = process.versions.bun
   ? getNodeRuntimeInclude({ filters: readRunFilters() })
   : []
 const balancedShards = process.env.ORCA_BALANCE_UNIT_SHARDS === '1'
 const moduleCachePath = process.env.ORCA_UNIT_MODULE_CACHE_PATH
-const measurementFile = 'src/main/foreign-sqlite-readers/foreign-sqlite-reader-event-loop.test.ts'
-const measurementFiles = [measurementFile]
 const phoneContractPattern = /\/mobile\/src\/.*\.(?:ts|tsx)(?:\?.*)?$/
 const transforms = {
   // Auto-discovery climbs past the repo for files no in-repo tsconfig owns, into an enclosing checkout.
@@ -46,6 +45,7 @@ const transforms = {
       }
     } satisfies Plugin,
     ...(moduleCachePath ? [moduleCacheResolutionKey()] : []),
+    ...vitestReactCompiler(),
     {
       // Unit tests have no asset server; retain real catalog parsing through fetch(data:).
       name: 'locale-catalog-test-assets',
@@ -105,7 +105,6 @@ const nodeProject = {
     name: process.versions.bun ? 'node-runtime' : 'node',
     env: { ORCA_VITEST_RUNTIME: process.versions.bun ? 'node-runtime' : 'node' },
     include: process.versions.bun ? nodeRuntimeInclude : UNIT_INCLUDE,
-    exclude: [...testOptions.exclude, ...measurementFiles],
     sequence: { groupOrder: 1 },
     ...(process.versions.bun
       ? { pool: 'node-runtime', poolRunner: nodeRuntimePool }
@@ -120,26 +119,11 @@ const bunProject = {
     name: 'bun',
     env: { ORCA_VITEST_RUNTIME: 'bun' },
     pool: 'forks',
-    exclude: [...testOptions.exclude, ...nodeRuntimeInclude, ...measurementFiles],
+    exclude: [...testOptions.exclude, ...nodeRuntimeInclude],
     sequence: { groupOrder: 1 }
   }
 }
-const projects = [
-  ...(process.versions.bun ? [bunProject] : []),
-  nodeProject,
-  // Keep the event-loop measurement free of other suites without weakening its limits.
-  {
-    ...nodeProject,
-    test: {
-      ...nodeProject.test,
-      name: 'node-measurement',
-      include: [measurementFile],
-      exclude: testOptions.exclude,
-      maxWorkers: 1,
-      sequence: { groupOrder: 2 }
-    }
-  }
-]
+const projects = [...(process.versions.bun ? [bunProject] : []), nodeProject]
 
 export default defineConfig({
   ...transforms,
@@ -160,6 +144,9 @@ export default defineConfig({
         }
       : {}),
     projects,
+    // A finished file's background log can lose the race with worker teardown; only that log line is lost.
+    onUnhandledError: (error) =>
+      !(error.name === 'EnvironmentTeardownError' && error.message.includes('"onUserConsoleLog"')),
     ...(process.platform === 'win32' ? { maxWorkers: 4 } : {})
   }
 })

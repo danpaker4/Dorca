@@ -1,4 +1,4 @@
-import type { SearchFileResult } from '../../../../shared/code-search-types'
+import type { SearchFileResult } from '../../../../shared/file-search/code-search-types'
 import type { ModelWorkspaceContext } from './monaco-ts-workspace-models'
 
 const searchCache = new Map<string, { timestamp: number; files: SearchFileResult[] }>()
