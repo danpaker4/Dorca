@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { planDorcaRelease } from './dorca-release-plan.mjs'
 import { integrateOrcaRelease } from './dorca-upstream-integration.mjs'
@@ -80,16 +80,20 @@ if (process.argv[2] === 'prepare') {
     git('fetch', '--no-tags', 'https://github.com/stablyai/orca.git', 'tag', next.upstreamTag)
     integrateOrcaRelease(previousSha, git('rev-parse', 'FETCH_HEAD^{commit}'))
   }
+  git('fetch', '--no-tags', 'https://github.com/stablyai/orca.git', 'tag', next.upstreamTag)
+  const upstreamCommit = git('rev-parse', 'FETCH_HEAD^{commit}')
+  if (
+    next.upstreamTag === current.upstreamTag &&
+    current.upstreamCommit &&
+    current.upstreamCommit !== upstreamCommit
+  ) {
+    throw new Error('The upstream release tag no longer matches the integrated commit')
+  }
+  next = { ...next, upstreamCommit }
   writeFileSync(METADATA, `${JSON.stringify(next, null, 2)}\n`)
   git('add', METADATA)
   if (git('diff', '--cached', '--name-only')) {
-    git(
-      '-c',
-      'core.hooksPath=',
-      'commit',
-      '-m',
-      `release: prepare Dorca v${next.version} with Orca ${next.upstreamTag}`
-    )
+    git('commit', '-m', `release: prepare Dorca v${next.version} with Orca ${next.upstreamTag}`)
   }
   appendFileSync(
     process.env.GITHUB_OUTPUT,
@@ -120,6 +124,15 @@ if (process.argv[2] === 'prepare') {
   const { DORCA_RELEASE_ASSETS, verifyDorcaReleaseAssets } =
     await import('./dorca-release-assets.mjs')
   const release = metadata()
+  const latestTag = run('gh', ['api', 'repos/stablyai/orca/releases/latest', '--jq', '.tag_name'])
+  if (latestTag !== release.upstreamTag) {
+    throw new Error(
+      `Orca ${latestTag} is now stable. Prepare and validate it before publishing Dorca.`
+    )
+  }
+  if (!/^[a-f0-9]{40}$/.test(release.upstreamCommit ?? '')) {
+    throw new Error('Release metadata must record the exact integrated Orca commit')
+  }
   const tag = `v${release.version}`
   await verifyDorcaReleaseAssets('dist', release.version)
   const head = git('rev-parse', 'HEAD')
@@ -132,9 +145,13 @@ if (process.argv[2] === 'prepare') {
   // A non-fast-forward push stops publication if main changed while the build was running.
   git('push', 'origin', 'HEAD:refs/heads/main')
   const notes = join(process.env.RUNNER_TEMP, 'dorca-release-notes.md')
+  const featureNotesPath = `docs/releases/dorca-${release.version}.md`
+  const featureNotes = existsSync(featureNotesPath)
+    ? `${readFileSync(featureNotesPath, 'utf8')}\n\n`
+    : ''
   writeFileSync(
     notes,
-    `Dorca ${release.version}, based on Orca ${release.upstreamTag}.\n\nWindows: download and run **dorca-windows-setup.exe**. Future Windows releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. Mac installers are added by the macOS build workflow after validation; Mac updates are installed manually.\n`
+    `${featureNotes}Dorca ${release.version}, based on Orca ${release.upstreamTag}, upstream commit \`${release.upstreamCommit}\`.\n\nWindows: download and run **dorca-windows-setup.exe**. Future Windows releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. Mac installers are added by the macOS build workflow after validation; Mac updates are installed manually.\n`
   )
   if (!existing) {
     gh(

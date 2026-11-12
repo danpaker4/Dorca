@@ -1,0 +1,26 @@
+.git-inline-marker {
+  border-left: 3px solid var(--git-decoration-modified);
+  cursor: pointer;
+  margin-left: 3px;
+}
+
+.git-inline-added {
+  border-color: var(--git-decoration-added);
+}
+
+.git-inline-deleted {
+  border-color: var(--git-decoration-deleted);
+  border-top: 3px solid var(--git-decoration-deleted);
+}
+
+.git-inline-staged {
+  border-left-style: dotted;
+  margin-left: 9px;
+}
+
+.git-inline-peek {
+  position: absolute;
+  z-index: 10;
+  height: 320px;
+  overflow: hidden;
+}

@@ -31,6 +31,7 @@ const {
   const appMock = {
     isPackaged: true,
     getVersion: vi.fn(() => '1.0.51'),
+    getName: () => 'Orca',
     on: vi.fn((event: string, handler: (...args: unknown[]) => void) => {
       appHandlers.set(event, [...(appHandlers.get(event) ?? []), handler])
       return appMock

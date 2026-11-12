@@ -44,6 +44,8 @@ export class RuntimeGitCommands {
   readonly generateRuntimePullRequestFields: RuntimeGitGenerationCommands['generateRuntimePullRequestFields']
   readonly cancelRuntimeGeneratePullRequestFields: RuntimeGitGenerationCommands['cancelRuntimeGeneratePullRequestFields']
   readonly discoverRuntimeCommitMessageModels: RuntimeGitGenerationCommands['discoverRuntimeCommitMessageModels']
+  readonly getRuntimeGitInlineSnapshot: RuntimeGitStagingCommands['getRuntimeGitInlineSnapshot']
+  readonly applyRuntimeGitInlineHunk: RuntimeGitStagingCommands['applyRuntimeGitInlineHunk']
   readonly stageRuntimeGitPath: RuntimeGitStagingCommands['stageRuntimeGitPath']
   readonly resolveRuntimeGitConflict: RuntimeGitStagingCommands['resolveRuntimeGitConflict']
   readonly unstageRuntimeGitPath: RuntimeGitStagingCommands['unstageRuntimeGitPath']
@@ -101,6 +103,8 @@ export class RuntimeGitCommands {
       generation.cancelRuntimeGeneratePullRequestFields.bind(generation)
     this.discoverRuntimeCommitMessageModels =
       generation.discoverRuntimeCommitMessageModels.bind(generation)
+    this.getRuntimeGitInlineSnapshot = staging.getRuntimeGitInlineSnapshot.bind(staging)
+    this.applyRuntimeGitInlineHunk = staging.applyRuntimeGitInlineHunk.bind(staging)
     this.stageRuntimeGitPath = staging.stageRuntimeGitPath.bind(staging)
     this.resolveRuntimeGitConflict = staging.resolveRuntimeGitConflict.bind(staging)
     this.unstageRuntimeGitPath = staging.unstageRuntimeGitPath.bind(staging)

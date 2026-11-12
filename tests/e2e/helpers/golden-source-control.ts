@@ -146,17 +146,18 @@ export function installPassingNodePreCommitHook(fixture: GoldenWorktree): string
 export async function activateGoldenWorktree(
   page: Page,
   repoPath: string,
-  worktreePath: string
+  worktreePath: string,
+  runtimeEnvironmentId: string | null = null
 ): Promise<void> {
   await expect
     .poll(
       async () => {
-        const listed = await page.evaluate(async () => {
+        const listed = await page.evaluate(async (runtimeEnvironmentId) => {
           const store = window.__store
           if (!store) {
             throw new Error('window.__store is not available')
           }
-          await store.getState().fetchRepos({ runtimeEnvironmentId: null, throwOnError: true })
+          await store.getState().fetchRepos({ runtimeEnvironmentId, throwOnError: true })
           const repos: {
             id: string
             path: string
@@ -174,7 +175,7 @@ export async function activateGoldenWorktree(
             })
           }
           return repos
-        })
+        }, runtimeEnvironmentId)
         // Compare in Node because only it can expand Windows 8.3 aliases with realpath.
         const repo = listed.find((entry) => goldenWorktreePathsMatch(entry.path, repoPath))
         const worktree = repo?.worktrees.find((entry) =>
@@ -184,15 +185,21 @@ export async function activateGoldenWorktree(
           return false
         }
         await page.evaluate(
-          ({ repoId, worktreeId }) => {
+          ({ repoId, worktreeId, executionHostId }) => {
             const store = window.__store
             if (!store) {
               throw new Error('window.__store is not available')
             }
             store.getState().setActiveRepo(repoId)
-            store.getState().setActiveWorktree(worktreeId)
+            store.getState().setActiveWorktree(worktreeId, executionHostId)
           },
-          { repoId: repo.id, worktreeId: worktree.id }
+          {
+            repoId: repo.id,
+            worktreeId: worktree.id,
+            executionHostId: runtimeEnvironmentId
+              ? (`runtime:${runtimeEnvironmentId}` as const)
+              : undefined
+          }
         )
         return true
       },

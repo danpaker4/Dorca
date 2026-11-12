@@ -39,11 +39,19 @@ async function createSharedLinkWorktree(): Promise<string> {
   git(['config', 'user.email', 'test@example.com'])
   git(['config', 'user.name', 'Test User'])
   git(['config', 'commit.gpgsign', 'false'])
-  await writeFile(path.join(repo, '.gitignore'), 'node_modules/\n')
+  // Windows junctions are directories to Git; exercise explicit link exclusion without that ignore.
+  await writeFile(
+    path.join(repo, '.gitignore'),
+    process.platform === 'win32' ? '' : 'node_modules/\n'
+  )
   git(['add', '.'])
   git(['commit', '-q', '-m', 'initial'])
   await mkdir(path.join(owner, 'node_modules'))
-  await symlink(path.join(owner, 'node_modules'), path.join(repo, 'node_modules'))
+  await symlink(
+    path.join(owner, 'node_modules'),
+    path.join(repo, 'node_modules'),
+    process.platform === 'win32' ? 'junction' : 'dir'
+  )
   await writeFile(path.join(repo, 'new.txt'), 'new\n')
   return repo
 }
@@ -89,7 +97,10 @@ describe('git.bulkStage with a whole-worktree scope', () => {
       params: { worktree: 'id:wt-1', filePaths: [], scope: 'all' }
     })
 
-    expect(response).toMatchObject({ ok: true, result: { ok: true, stagedScope: 'all' } })
+    expect(response, JSON.stringify(response)).toMatchObject({
+      ok: true,
+      result: { ok: true, stagedScope: 'all' }
+    })
     expect(names(repo, ['diff', '--cached', '--name-only'])).toEqual(['new.txt'])
   })
 })

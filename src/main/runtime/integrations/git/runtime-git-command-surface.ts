@@ -37,6 +37,8 @@ type RuntimeGitCommandName =
   | 'cancelRuntimeGenerateCommitMessage'
   | 'generateRuntimePullRequestFields'
   | 'cancelRuntimeGeneratePullRequestFields'
+  | 'getRuntimeGitInlineSnapshot'
+  | 'applyRuntimeGitInlineHunk'
   | 'stageRuntimeGitPath'
   | 'resolveRuntimeGitConflict'
   | 'unstageRuntimeGitPath'
@@ -91,6 +93,8 @@ export function installRuntimeGitCommandSurface(
     generateRuntimePullRequestFields: commands.generateRuntimePullRequestFields.bind(commands),
     cancelRuntimeGeneratePullRequestFields:
       commands.cancelRuntimeGeneratePullRequestFields.bind(commands),
+    getRuntimeGitInlineSnapshot: commands.getRuntimeGitInlineSnapshot.bind(commands),
+    applyRuntimeGitInlineHunk: commands.applyRuntimeGitInlineHunk.bind(commands),
     stageRuntimeGitPath: commands.stageRuntimeGitPath.bind(commands),
     resolveRuntimeGitConflict: commands.resolveRuntimeGitConflict.bind(commands),
     unstageRuntimeGitPath: commands.unstageRuntimeGitPath.bind(commands),

@@ -48,6 +48,14 @@ export const GitFilePath = WorktreeSelector.extend({
     .pipe(z.string().min(1, 'Missing file path'))
 })
 
+export const GitInlineHunkAction = WorktreeSelector.extend({
+  filePath: z.string().min(1),
+  token: z.string().regex(/^[a-f0-9]{64}$/),
+  staged: z.boolean(),
+  hunkIndex: z.number().int().nonnegative(),
+  bufferContent: z.string().max(1024 * 1024)
+})
+
 export const GitResolveConflict = GitFilePath.extend({
   resolution: z.enum(CONFLICT_RESOLUTIONS)
 })

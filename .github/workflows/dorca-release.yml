@@ -126,4 +126,7 @@ jobs:
 
       - name: Publish the complete Dorca release
         if: steps.prepare.outputs.should_release == 'true'
-        run: node config/scripts/dorca-release.mjs publish
+        run: |
+          pnpm check:changed
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node config/scripts/dorca-release.mjs publish

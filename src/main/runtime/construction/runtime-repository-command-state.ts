@@ -25,6 +25,12 @@ import { OrcaRuntimeWithFileCommands } from './runtime-file-command-state'
 export abstract class OrcaRuntimeWithRepositoryCommands extends OrcaRuntimeWithFileCommands {
   protected readonly gitCommands = new RuntimeGitCommands({
     resolveRuntimeGitTarget: (selector) => this.resolveRuntimeGitTarget(selector),
+    resolveRuntimeInlineGitTarget: async (selector) => {
+      if (selector.replace(/^id:/, '').startsWith('folder:')) {
+        return this.resolveRuntimeFileTarget(selector)
+      }
+      return this.resolveRuntimeGitTarget(selector)
+    },
     getRuntimeSettings: () => this.requireStore().getSettings(),
     getCommitMessageAgentEnvironment: () => this.accounts.getCommitMessageAgentEnvironment(),
     // Override the resolver's one-second linked-issue cache so template generation sees link/unlink immediately.

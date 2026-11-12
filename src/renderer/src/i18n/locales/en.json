@@ -24423,7 +24423,22 @@
     "settingsStatus": "Orca {{version}} requires macOS {{macos}} or later. This is the latest version for this Mac."
   },
   "dorca": {
-    "findAllReferences": "Find All References"
+    "findAllReferences": "Find All References",
+    "inlineGit": {
+      "stagedChange": "Staged Git change",
+      "unstagedChange": "Unstaged Git change",
+      "region": "Inline Git change",
+      "staged": "Staged",
+      "unstaged": "Unstaged",
+      "unstage": "Unstage",
+      "stage": "Stage",
+      "revert": "Revert",
+      "previous": "Previous change",
+      "next": "Next change",
+      "close": "Close change",
+      "saveFirst": "Save this file before staging or unstaging. Revert can be undone in the editor.",
+      "peek": "Peek Git Change"
+    }
   },
   "remoteHostBrowserControl": {
     "title": "{{host}} is controlling a browser tab",

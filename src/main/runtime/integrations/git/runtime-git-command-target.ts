@@ -30,6 +30,11 @@ export type RuntimeGitTarget = {
 }
 
 export type RuntimeGitCommandHost = {
+  resolveRuntimeInlineGitTarget?(selector: string): Promise<{
+    worktree: { path: string }
+    executionHostId: ExecutionHostId
+    localGitOptions?: GitRuntimeOptions
+  }>
   resolveRuntimeGitTarget(selector: string): Promise<RuntimeGitTarget>
   getRuntimeSettings(): SourceControlAiSettingsInput
   getCommitMessageAgentEnvironment?(): CommitMessageAgentEnvironmentResolvers | undefined

@@ -1,3 +1,7 @@
+import {
+  remoteRpcContentBudget,
+  remoteRpcResultExceedsContentBudget
+} from '../../../../../../shared/remote-rpc-content-budget'
 import { GIT_STATUS_METHODS } from './git-status-methods'
 import { GIT_COMMIT_ACTION_METHODS } from './git-commit-action-methods'
 import { defineMethod } from '../../../core'
@@ -13,6 +17,7 @@ import {
   GitCommit,
   GitCommitCompare,
   GitFilePath,
+  GitInlineHunkAction,
   GitResolveConflict,
   GitForkSync,
   GitHistory,
@@ -26,6 +31,33 @@ import {
 } from '../../../../../../shared/rpc-contract/git-params'
 
 export const GIT_METHODS = [
+  defineMethod({
+    name: 'git.inlineSnapshot',
+    permission: 'workspace',
+    params: GitFilePath,
+    handler: async (params, { runtime, clientKind, requestId }) => {
+      const result = await runtime.getRuntimeGitInlineSnapshot(params.worktree, params.filePath)
+      if (
+        clientKind &&
+        requestId &&
+        remoteRpcResultExceedsContentBudget(result, remoteRpcContentBudget(requestId), [
+          'headContent',
+          'indexContent',
+          'diskContent'
+        ])
+      ) {
+        throw new Error('This file is too large for inline Git review over a remote connection.')
+      }
+      return result
+    }
+  }),
+  defineMethod({
+    name: 'git.applyInlineHunk',
+    permission: 'workspace',
+    params: GitInlineHunkAction,
+    handler: async (params, { runtime }) =>
+      runtime.applyRuntimeGitInlineHunk(params.worktree, params)
+  }),
   ...GIT_STATUS_METHODS,
   defineMethod({
     name: 'git.checkIgnored',

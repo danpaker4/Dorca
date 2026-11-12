@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import Editor from '@monaco-editor/react'
+import { MonacoGitChanges } from './git-inline/MonacoGitChanges'
 import type { editor, IRange } from 'monaco-editor'
 import type { MarkdownDocument } from '../../../../shared/file-listing/file-document'
 import { useAppStore } from '@/store'
@@ -330,6 +331,12 @@ export default function MonacoEditor({
         keepCurrentModel
       />
 
+      <MonacoGitChanges
+        source={mountedEditor}
+        fileId={fileId}
+        relativePath={relativePath}
+        enabled={!readOnly && !passiveMirror && !autoHeight}
+      />
       {toastNode}
       <MonacoGutterContextMenu
         open={gutterMenuOpen}

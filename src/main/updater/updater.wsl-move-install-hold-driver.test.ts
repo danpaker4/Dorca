@@ -77,6 +77,7 @@ warmUpdaterModule()
 
 /** The mover, loaded after the updater so both read one running-moves registry. */
 type Mover = {
+  closeStores: () => Promise<void>
   rig: RigModule.WslMoveRig
   fixture: typeof RigModule
   driver: typeof Driver
@@ -94,6 +95,7 @@ async function loadMover(): Promise<Mover> {
   profile.state = harness.testState
   const fixture = await import('../persistence/__fixtures__/wsl-mover/wsl-move-kill-rig')
   const loaded: Mover = {
+    closeStores: harness.closeTestStores,
     rig: fixture.createWslMoveKillRig(),
     fixture,
     driver: await import('../persistence/moving-wsl-projects/wsl-move-driver'),
@@ -114,11 +116,12 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
-afterEach(() => {
+afterEach(async () => {
   vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllEnvs()
   mover?.rewriteStores.resetWslMoveDesktopRewriteStoresForTests()
+  await mover?.closeStores()
   mover?.fixture.removeWslMoveRigDirs()
   mover = null
 })

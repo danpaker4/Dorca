@@ -46,6 +46,7 @@ function git(root, args, options = {}) {
   return execFileSync('git', args, {
     cwd: root,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
     stdio: ['ignore', 'pipe', 'ignore'],
     ...options
   })
