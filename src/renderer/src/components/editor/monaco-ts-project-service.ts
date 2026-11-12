@@ -1,17 +1,11 @@
+import { ProjectFiles } from './monaco-ts-project-files'
 import { typescript as ts } from 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'
 import { TypeScriptWorker } from 'monaco-editor/esm/vs/language/typescript/tsWorker.js'
 import {
   isCaseInsensitiveRuntimeRoot,
   resolveRuntimePath
 } from '../../../../shared/cross-platform-path'
-import type {
-  CompilerOptions,
-  ParsedCommandLine,
-  ParseConfigHost,
-  IScriptSnapshot,
-  ScriptKind,
-  LanguageService
-} from 'typescript-api'
+import type { CompilerOptions, IScriptSnapshot, ScriptKind, LanguageService } from 'typescript-api'
 import {
   isInsideProject,
   normalizeProjectPath,
@@ -20,142 +14,6 @@ import {
 } from './monaco-ts-project-protocol'
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/i
-
-class ProjectFiles {
-  readonly missing = new Set<string>()
-  readonly root: string
-  readonly names: string[]
-  private readonly knownNames: Set<string>
-  private readonly directories = new Map<string, { files: Set<string>; directories: Set<string> }>()
-  private readonly contents = new Map<string, string | null>()
-
-  constructor(readonly request: TypeScriptProjectQuery) {
-    this.root = normalizeProjectPath(request.rootPath)
-    this.names = request.fileNames.map(normalizeProjectPath)
-    this.knownNames = new Set(this.names)
-    for (const name of this.names) {
-      let path = name
-      let isFile = true
-      while (isInsideProject(this.root, path) && path !== this.root) {
-        const parent = normalizeProjectPath(resolveRuntimePath(path, '..'))
-        if (parent === path) {
-          break
-        }
-        const entry = this.directories.get(parent) ?? {
-          files: new Set<string>(),
-          directories: new Set<string>()
-        }
-        entry[isFile ? 'files' : 'directories'].add(
-          path.slice(parent.length + (parent.endsWith('/') ? 0 : 1))
-        )
-        this.directories.set(parent, entry)
-        path = parent
-        isFile = false
-      }
-    }
-    for (const [name, content] of Object.entries(request.files)) {
-      this.contents.set(normalizeProjectPath(name), content)
-    }
-  }
-
-  readFile = (name: string): string | undefined => {
-    const path = normalizeProjectPath(name)
-    if (!isInsideProject(this.root, path)) {
-      return undefined
-    }
-    if (!this.contents.has(path)) {
-      this.missing.add(path)
-    }
-    return this.contents.get(path) ?? undefined
-  }
-
-  fileExists = (name: string): boolean => {
-    const path = normalizeProjectPath(name)
-    if (!isInsideProject(this.root, path)) {
-      return false
-    }
-    if (this.contents.has(path)) {
-      return this.contents.get(path) !== null
-    }
-    if (this.knownNames.has(path)) {
-      return true
-    }
-    this.missing.add(path)
-    return false
-  }
-
-  readDirectory: ParseConfigHost['readDirectory'] = (path, extensions, excludes, includes, depth) =>
-    ts.matchFiles(
-      path,
-      extensions,
-      excludes,
-      includes,
-      true,
-      this.root,
-      depth,
-      (directory) => {
-        const entry = this.directories.get(normalizeProjectPath(directory))
-        return { files: [...(entry?.files ?? [])], directories: [...(entry?.directories ?? [])] }
-      },
-      normalizeProjectPath
-    )
-
-  project(): ParsedCommandLine | undefined {
-    let directory = normalizeProjectPath(resolveRuntimePath(this.request.filePath, '..'))
-    while (isInsideProject(this.root, directory)) {
-      for (const name of ['tsconfig.json', 'jsconfig.json']) {
-        const config = resolveRuntimePath(directory, name)
-        if (this.fileExists(config)) {
-          return this.readProject(config, new Set())
-        }
-      }
-      const parent = normalizeProjectPath(resolveRuntimePath(directory, '..'))
-      if (parent === directory) {
-        break
-      }
-      directory = parent
-    }
-    return undefined
-  }
-
-  private readProject(config: string, seen: Set<string>): ParsedCommandLine | undefined {
-    if (seen.has(config)) {
-      return undefined
-    }
-    seen.add(config)
-    const input = ts.readConfigFile(config, this.readFile)
-    if (input.error) {
-      return undefined
-    }
-    const project = ts.parseJsonConfigFileContent(
-      input.config,
-      {
-        useCaseSensitiveFileNames: true,
-        readDirectory: this.readDirectory,
-        readFile: this.readFile,
-        fileExists: this.fileExists
-      },
-      resolveRuntimePath(config, '..'),
-      undefined,
-      config
-    )
-    const source = normalizeProjectPath(this.request.filePath)
-    if (project.fileNames.some((name) => normalizeProjectPath(name) === source)) {
-      return project
-    }
-    for (const reference of project.projectReferences ?? []) {
-      const path = ts.resolveProjectReferencePath(reference)
-      if (!isInsideProject(this.root, normalizeProjectPath(path))) {
-        continue
-      }
-      const child = this.readProject(path, seen)
-      if (child?.fileNames.some((name) => normalizeProjectPath(name) === source)) {
-        return child
-      }
-    }
-    return project
-  }
-}
 
 function createProjectService(
   files: ProjectFiles,
@@ -212,7 +70,37 @@ function createProjectService(
   return new ProjectLanguageService().getLanguageService()
 }
 
-export function queryTypeScriptProject(request: TypeScriptProjectQuery): TypeScriptProjectResult {
+type ProjectServiceCache = { request?: TypeScriptProjectQuery; service?: LanguageService }
+
+export function createTypeScriptProjectQuery(): typeof queryTypeScriptProject {
+  const cache: ProjectServiceCache = {}
+  return (request) => queryTypeScriptProject(request, cache)
+}
+
+function isSameProject(a: TypeScriptProjectQuery, b: TypeScriptProjectQuery): boolean {
+  return (
+    a.rootPath === b.rootPath &&
+    a.filePath === b.filePath &&
+    a.kind === b.kind &&
+    a.fileNames.length === b.fileNames.length &&
+    a.fileNames.every((name, index) => name === b.fileNames[index]) &&
+    Object.keys(a.files).length === Object.keys(b.files).length &&
+    Object.entries(a.files).every(([name, content]) => b.files[name] === content)
+  )
+}
+
+export function queryTypeScriptProject(
+  request: TypeScriptProjectQuery,
+  cache?: ProjectServiceCache
+): TypeScriptProjectResult {
+  if (cache?.request && cache.service && isSameProject(cache.request, request)) {
+    return queryProjectLocations(request, cache.service, normalizeProjectPath(request.rootPath), [])
+  }
+  cache?.service?.dispose()
+  if (cache) {
+    cache.service = undefined
+    cache.request = undefined
+  }
   const files = new ProjectFiles(request)
   const project = files.project()
   if (files.missing.size > 0) {
@@ -231,7 +119,7 @@ export function queryTypeScriptProject(request: TypeScriptProjectQuery): TypeScr
             filePath
           ])
         ]
-  const service = createProjectService(files, roots, {
+  const options: CompilerOptions = {
     target: ts.ScriptTarget.ESNext,
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.NodeJs,
@@ -239,40 +127,89 @@ export function queryTypeScriptProject(request: TypeScriptProjectQuery): TypeScr
     jsx: ts.JsxEmit.Preserve,
     ...(!project ? { moduleDetection: ts.ModuleDetectionKind.Force } : {}),
     ...project?.options
-  })
-  try {
-    const entries =
-      request.kind === 'definition'
-        ? (service.getDefinitionAtPosition(filePath, request.offset) ?? []).filter(
-            (entry) => entry.kind !== ts.ScriptElementKind.alias
-          )
-        : (service.findReferences(filePath, request.offset) ?? []).flatMap((group) =>
-            group.references.filter((entry) => request.includeDeclaration || !entry.isDefinition)
-          )
-    const program = service.getProgram()
-    const locations: TypeScriptProjectResult['locations'] = []
-    for (const entry of entries) {
-      if (!isInsideProject(files.root, normalizeProjectPath(entry.fileName))) {
-        continue
-      }
-      const source = program?.getSourceFile(entry.fileName)
-      if (!source) {
-        continue
-      }
-      const start = source.getLineAndCharacterOfPosition(entry.textSpan.start)
-      const end = source.getLineAndCharacterOfPosition(entry.textSpan.start + entry.textSpan.length)
-      locations.push({
-        filePath: entry.fileName,
-        range: {
-          startLineNumber: start.line + 1,
-          startColumn: start.character + 1,
-          endLineNumber: end.line + 1,
-          endColumn: end.character + 1
-        }
-      })
-    }
-    return { missingFiles: [...files.missing], locations }
-  } finally {
-    service.dispose()
   }
+  // Discover unloaded imports before paying to build and type-check a program.
+  const visited = new Set<string>()
+  const pending = [...roots]
+  const knownNames = new Set(files.names)
+  while (pending.length > 0) {
+    const name = pending.pop()!
+    if (visited.has(name)) {
+      continue
+    }
+    visited.add(name)
+    const content = files.readFile(name)
+    if (content === undefined) {
+      continue
+    }
+    const info = ts.preProcessFile(content, true, true)
+    for (const imported of info.importedFiles) {
+      const resolved = ts.resolveModuleName(imported.fileName, name, options, files).resolvedModule
+      if (resolved) {
+        pending.push(resolved.resolvedFileName)
+      }
+    }
+    for (const reference of info.referencedFiles) {
+      pending.push(
+        normalizeProjectPath(resolveRuntimePath(resolveRuntimePath(name, '..'), reference.fileName))
+      )
+    }
+  }
+  if ([...files.missing].some((name) => knownNames.has(name))) {
+    return { missingFiles: [...files.missing], locations: [] }
+  }
+  const service = createProjectService(files, roots, options)
+  try {
+    const result = queryProjectLocations(request, service, files.root, [])
+    result.missingFiles = [...files.missing]
+    if (cache && files.missing.size === 0) {
+      cache.service = service
+      cache.request = request
+    }
+    return result
+  } finally {
+    if (cache?.service !== service) {
+      service.dispose()
+    }
+  }
+}
+
+function queryProjectLocations(
+  request: TypeScriptProjectQuery,
+  service: LanguageService,
+  root: string,
+  missingFiles: string[]
+): TypeScriptProjectResult {
+  const filePath = normalizeProjectPath(request.filePath)
+  const entries =
+    request.kind === 'definition'
+      ? (service.getDefinitionAtPosition(filePath, request.offset) ?? []).filter(
+          (entry) => entry.kind !== ts.ScriptElementKind.alias
+        )
+      : (service.findReferences(filePath, request.offset) ?? []).flatMap((group) =>
+          group.references.filter((entry) => request.includeDeclaration || !entry.isDefinition)
+        )
+  const program = service.getProgram()
+  const locations: TypeScriptProjectResult['locations'] = []
+  for (const entry of entries) {
+    if (!isInsideProject(root, normalizeProjectPath(entry.fileName))) {
+      continue
+    }
+    const source = program?.getSourceFile(entry.fileName)
+    if (!source) {
+      continue
+    }
+    const start = source.getLineAndCharacterOfPosition(entry.textSpan.start)
+    const end = source.getLineAndCharacterOfPosition(entry.textSpan.start + entry.textSpan.length)
+    locations.push({
+      filePath: entry.fileName,
+      range: {
+        startLineNumber: start.line + 1,
+        startColumn: start.character + 1,
+        endLineNumber: end.line + 1,
+        endColumn: end.character + 1
+      }
+    })
+  }
+  return { missingFiles, locations }
 }

@@ -35,6 +35,8 @@ export function MonacoGitChanges({
   const [buffer, setBuffer] = useState('')
   const [selected, setSelected] = useState<number | null>(null)
   const [zone, setZone] = useState<HTMLDivElement | null>(null)
+  const resizePeek = useRef<((height: number) => void) | null>(null)
+  const onPeekHeightChange = useCallback((height: number) => resizePeek.current?.(height), [])
   const [busy, setBusy] = useState(false)
   const busyRef = useRef(false)
   const [error, setError] = useState<string | null>(null)
@@ -259,7 +261,7 @@ export function MonacoGitChanges({
     const height = Math.min(
       320,
       Math.max(
-        160,
+        64,
         64 +
           (current.hunk.originalText.split('\n').length +
             current.hunk.modifiedText.split('\n').length) *
@@ -289,17 +291,28 @@ export function MonacoGitChanges({
     const subscription = source.onDidLayoutChange(layout)
     const scroll = source.onDidScrollChange(position)
     let id = ''
+    const viewZone: editor.IViewZone = {
+      afterLineNumber,
+      heightInPx: height,
+      domNode: spacer
+    }
     source.changeViewZones((accessor) => {
-      id = accessor.addZone({
-        afterLineNumber,
-        heightInPx: height,
-        domNode: spacer
-      })
+      id = accessor.addZone(viewZone)
     })
+    resizePeek.current = (nextHeight) => {
+      if (viewZone.heightInPx === nextHeight) {
+        return
+      }
+      viewZone.heightInPx = nextHeight
+      domNode.style.height = `${nextHeight}px`
+      source.changeViewZones((accessor) => accessor.layoutZone(id))
+      position()
+    }
     setZone(domNode)
     source.revealLineNearTop(afterLineNumber)
     position()
     return () => {
+      resizePeek.current = null
       subscription.dispose()
       scroll.dispose()
       domNode.remove()
@@ -360,6 +373,7 @@ export function MonacoGitChanges({
         setError(null)
       }}
       onClose={close}
+      onHeightChange={onPeekHeightChange}
     />,
     zone
   )

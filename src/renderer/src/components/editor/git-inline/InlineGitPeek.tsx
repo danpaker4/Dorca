@@ -22,7 +22,8 @@ export function InlineGitPeek({
   onStage,
   onRevert,
   onMove,
-  onClose
+  onClose,
+  onHeightChange
 }: {
   hunk: GitInlineHunk
   staged: boolean
@@ -36,6 +37,7 @@ export function InlineGitPeek({
   onRevert: () => void
   onMove: (direction: number) => void
   onClose: () => void
+  onHeightChange?: (height: number) => void
 }): React.JSX.Element {
   const t = useTranslate()
   const [showProgress, setShowProgress] = useState(false)
@@ -86,12 +88,27 @@ export function InlineGitPeek({
     const original = editor.createModel(hunk.originalText, language)
     const modified = editor.createModel(hunk.modifiedText, language)
     diff.setModel({ original, modified })
+    const resize = (): void => {
+      if (!section.current || !container.current) {
+        return
+      }
+      const chrome = section.current.offsetHeight - container.current.offsetHeight
+      onHeightChange?.(Math.min(320, chrome + diff.getModifiedEditor().getContentHeight()))
+    }
+    const contentSize = diff.getModifiedEditor().onDidContentSizeChange(resize)
+    const updated = diff.onDidUpdateDiff(resize)
+    const observer = new ResizeObserver(resize)
+    observer.observe(section.current!)
+    resize()
     return () => {
+      observer.disconnect()
+      contentSize.dispose()
+      updated.dispose()
       diff.dispose()
       original.dispose()
       modified.dispose()
     }
-  }, [hunk, language, theme, typography, t, staged])
+  }, [hunk, language, theme, typography, t, staged, onHeightChange])
   return (
     <section
       ref={section}

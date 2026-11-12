@@ -10,11 +10,8 @@ import {
   ensureCandidateFileModel,
   modelContextByUri
 } from './monaco-ts-workspace-models'
-import {
-  isInsideProject,
-  normalizeProjectPath,
-  type TypeScriptProjectWorker
-} from './monaco-ts-project-protocol'
+import { isInsideProject, normalizeProjectPath } from './monaco-ts-project-protocol'
+import { acquireNavigationSession, releaseNavigationSession } from './monaco-ts-navigation-session'
 
 const MAX_INVENTORY_FILES = 100_000
 const MAX_READ_FILES = 20_000
@@ -36,25 +33,27 @@ export async function queryWorkspaceSymbol(
   const buffers = new Map<Monaco.editor.ITextModel, number>([[model, version]])
   const cancelled = (): boolean =>
     token.isCancellationRequested ||
+    session.revision !== revision ||
     [...buffers].some(([buffer, stamp]) => buffer.isDisposed() || buffer.getVersionId() !== stamp)
   const root = normalizeProjectPath(ctx.projectRootPath ?? ctx.worktreePath)
-  const worker = monaco.editor.createWebWorker<TypeScriptProjectWorker>({
-    worker: new Worker(new URL('./monaco-ts-workspace.worker.ts', import.meta.url), {
-      type: 'module',
-      name: 'typescript-workspace'
-    })
-  })
+  const session = acquireNavigationSession(monaco, model, ctx)
+  const revision = session.revision
   try {
     ctx.assertAuthorityCurrent()
-    const inventory = await listRuntimeFiles(ctx.readContext, {
-      rootPath: root,
-      includeIgnored: false,
-      allowLegacyIncludeIgnored: true,
-      maxResults: MAX_INVENTORY_FILES + 1
-    })
+    const inventory =
+      session.inventory ??
+      (await listRuntimeFiles(ctx.readContext, {
+        rootPath: root,
+        includeIgnored: false,
+        allowLegacyIncludeIgnored: true,
+        maxResults: MAX_INVENTORY_FILES + 1
+      }))
     ctx.assertAuthorityCurrent()
     if (cancelled() || inventory.length > MAX_INVENTORY_FILES) {
       return []
+    }
+    if (session.watching && session.revision === revision) {
+      session.inventory = inventory
     }
     const fileNames = inventory
       .map((name) =>
@@ -65,7 +64,7 @@ export async function queryWorkspaceSymbol(
         )
       )
       .filter((name) => isInsideProject(root, name))
-    const files: Record<string, string | null> = {}
+    const files: Record<string, string | null> = { ...session.files }
     const state = useAppStore.getState()
     const paths = new Set(
       (state.openFiles ?? [])
@@ -110,7 +109,7 @@ export async function queryWorkspaceSymbol(
       }
     }
     files[normalizeProjectPath(ctx.filePath)] = model.getValue()
-    const proxy = await worker.getProxy()
+    const proxy = await session.worker.getProxy()
     let bytes = Object.values(files).reduce(
       (total, content) => total + (content?.length ?? 0) * 2,
       0
@@ -118,7 +117,7 @@ export async function queryWorkspaceSymbol(
     if (bytes > MAX_SOURCE_BYTES) {
       return []
     }
-    for (let round = 0; round < 32; round++) {
+    while (true) {
       if (cancelled()) {
         return []
       }
@@ -179,9 +178,15 @@ export async function queryWorkspaceSymbol(
               const content =
                 !result.isBinary && typeof result.content === 'string' ? result.content : null
               files[filePath] = content
+              if (session.watching && session.revision === revision) {
+                session.files[filePath] = content
+              }
               bytes += (content?.length ?? 0) * 2
             } catch {
               files[filePath] = null
+              if (session.watching && session.revision === revision) {
+                session.files[filePath] = null
+              }
             }
           })
         )
@@ -190,10 +195,9 @@ export async function queryWorkspaceSymbol(
         }
       }
     }
-    return []
   } catch {
     return []
   } finally {
-    worker.dispose()
+    releaseNavigationSession(session)
   }
 }

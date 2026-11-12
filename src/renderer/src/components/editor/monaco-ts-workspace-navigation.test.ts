@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { registerWorkspaceDefinitions } from './monaco-ts-workspace-definitions'
 import { registerWorkspaceReferences } from './monaco-ts-workspace-references'
 import { modelContextByUri } from './monaco-ts-workspace-models'
-import { queryTypeScriptProject } from './monaco-ts-project-service'
+import { createTypeScriptProjectQuery, queryTypeScriptProject } from './monaco-ts-project-service'
 import { queryWorkspaceSymbol } from './monaco-ts-workspace-navigation'
 import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
 import type { EditorBufferKeptRecords } from '@/store/slices/editor/buffers/editor-buffer-kept'
@@ -20,9 +20,10 @@ vi.mock('@/store', () => ({ useAppStore: { getState: () => state } }))
 
 beforeEach(() => {
   vi.stubGlobal('Worker', class {})
+  const query = createTypeScriptProjectQuery()
   vi.spyOn(monaco.editor, 'createWebWorker').mockReturnValue({
-    getProxy: async () => ({ query: queryTypeScriptProject }),
-    withSyncedResources: async () => ({ query: queryTypeScriptProject }),
+    getProxy: async () => ({ query }),
+    withSyncedResources: async () => ({ query }),
     dispose() {}
   })
 })
@@ -424,3 +425,111 @@ it.each([
     ).toEqual([[expectedFile, 1, column]])
   }
 )
+
+it('navigates through a deep reexport chain instead of silently abandoning the request', async () => {
+  const disk: Record<string, string> = {
+    '/repo/use.ts': "import { Server } from './barrel0'\nnew Server()",
+    '/repo/server.ts': 'export class Server {}'
+  }
+  for (let index = 0; index < 40; index++) {
+    disk[`/repo/barrel${index}.ts`] =
+      `export { Server } from './${index === 39 ? 'server' : `barrel${index + 1}`}'`
+  }
+  const model = monaco.editor.createModel(
+    disk['/repo/use.ts'],
+    'typescript',
+    monaco.Uri.file('/repo/use.ts')
+  )
+  modelContextByUri.set(model.uri.toString(), {
+    filePath: '/repo/use.ts',
+    relativePath: 'use.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  })
+  vi.stubGlobal('api', {
+    fs: {
+      listFiles: async () => Object.keys(disk),
+      readFile: async ({ filePath }: { filePath: string }) => {
+        if (!(filePath in disk)) {
+          throw new Error('missing')
+        }
+        return { content: disk[filePath] }
+      }
+    }
+  })
+  const locations = await queryWorkspaceSymbol(
+    monaco,
+    model,
+    new monaco.Position(2, 7),
+    { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) },
+    'definition'
+  )
+  expect(
+    locations?.map(({ uri, range }) => [uri.path, range.startLineNumber, range.startColumn])
+  ).toEqual([['/repo/server.ts', 1, 14]])
+})
+
+it('refreshes reference locations after a watched file changes while keeping a navigation session warm', async () => {
+  const disk: Record<string, string> = {
+    '/repo/server.ts': 'export class Server {}',
+    '/repo/use.ts': "import { Server } from './server'\nnew Server()"
+  }
+  const model = monaco.editor.createModel(
+    disk['/repo/server.ts'],
+    'typescript',
+    monaco.Uri.file('/repo/server.ts')
+  )
+  modelContextByUri.set(model.uri.toString(), {
+    filePath: '/repo/server.ts',
+    relativePath: 'server.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  })
+  let changed: ((payload: { worktreePath: string; events: [] }) => void) | undefined
+  vi.stubGlobal('api', {
+    fs: {
+      listFiles: async () => Object.keys(disk),
+      onFsChanged: (listener: typeof changed) => {
+        changed = listener
+        return () => {}
+      },
+      readFile: async ({ filePath }: { filePath: string }) => {
+        if (!(filePath in disk)) {
+          throw new Error('missing')
+        }
+        return { content: disk[filePath] }
+      }
+    }
+  })
+  const references = async (): Promise<unknown> => {
+    const locations = await queryWorkspaceSymbol(
+      monaco,
+      model,
+      new monaco.Position(1, 15),
+      { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) },
+      'references',
+      false
+    )
+    return locations
+      ?.filter(({ uri }) => uri.path === '/repo/use.ts')
+      .map(({ range }) => [range.startLineNumber, range.startColumn])
+  }
+  expect(await references()).toEqual([
+    [1, 10],
+    [2, 5]
+  ])
+  expect(await references()).toEqual([
+    [1, 10],
+    [2, 5]
+  ])
+  disk['/repo/use.ts'] = "import { Server } from './server'\n\nnew Server()"
+  changed!({ worktreePath: '/repo', events: [] })
+  expect(await references()).toEqual([
+    [1, 10],
+    [3, 5]
+  ])
+})
