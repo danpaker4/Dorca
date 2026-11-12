@@ -48,6 +48,8 @@ export async function queryWorkspaceSymbol(
     ctx.assertAuthorityCurrent()
     const inventory = await listRuntimeFiles(ctx.readContext, {
       rootPath: root,
+      includeIgnored: false,
+      allowLegacyIncludeIgnored: true,
       maxResults: MAX_INVENTORY_FILES + 1
     })
     ctx.assertAuthorityCurrent()
@@ -137,7 +139,7 @@ export async function queryWorkspaceSymbol(
       const missing = result.missingFiles.filter(
         (name) => isInsideProject(root, normalizeProjectPath(name)) && !(name in files)
       )
-      if (missing.length === 0) {
+      if (missing.length === 0 || (kind === 'definition' && result.locations.length > 0)) {
         await Promise.all(
           [...new Set(result.locations.map((entry) => entry.filePath))].map((filePath) =>
             ensureCandidateFileModel(

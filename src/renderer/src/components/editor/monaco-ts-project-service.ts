@@ -215,6 +215,9 @@ function createProjectService(
 export function queryTypeScriptProject(request: TypeScriptProjectQuery): TypeScriptProjectResult {
   const files = new ProjectFiles(request)
   const project = files.project()
+  if (files.missing.size > 0) {
+    return { missingFiles: [...files.missing], locations: [] }
+  }
   const filePath = normalizeProjectPath(request.filePath)
   const roots =
     request.kind === 'definition'

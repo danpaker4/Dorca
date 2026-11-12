@@ -108,6 +108,87 @@ it('does not turn unrelated Server name matches into definitions or references',
   ).toEqual([])
 })
 
+it('resolves a source definition when ignored build output would exhaust the project inventory', async () => {
+  const content = "import { Server } from './server'\nnew Server()"
+  const model = monaco.editor.createModel(content, 'typescript', monaco.Uri.file('/repo/use.ts'))
+  modelContextByUri.set(model.uri.toString(), {
+    filePath: '/repo/use.ts',
+    relativePath: 'use.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  })
+  vi.stubGlobal('api', {
+    fs: {
+      listFiles: async ({ includeIgnored }: { includeIgnored?: boolean }) =>
+        includeIgnored === false
+          ? ['use.ts', 'server.ts']
+          : ['use.ts', 'server.ts', ...Array.from({ length: 100_001 }, (_, i) => `dist/${i}.js`)],
+      readFile: async ({ filePath }: { filePath: string }) => {
+        if (filePath === '/repo/server.ts') {
+          return { content: 'export class Server {}' }
+        }
+        throw new Error('missing')
+      }
+    }
+  })
+  const locations = await queryWorkspaceSymbol(
+    monaco,
+    model,
+    new monaco.Position(2, 7),
+    { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) },
+    'definition'
+  )
+  expect(locations?.map(({ uri, range }) => [uri.toString(), range])).toEqual([
+    [
+      'file:///repo/server.ts',
+      { startLineNumber: 1, startColumn: 14, endLineNumber: 1, endColumn: 20 }
+    ]
+  ])
+})
+
+it('returns a known definition without requiring unrelated missing dependencies', async () => {
+  const model = monaco.editor.createModel(
+    [
+      'export class Server {}',
+      ...Array.from({ length: 2000 }, (_, index) => `import 'optional-package-${index}'`),
+      'new Server()'
+    ].join('\n'),
+    'typescript',
+    monaco.Uri.file('/repo/use.ts')
+  )
+  modelContextByUri.set(model.uri.toString(), {
+    filePath: '/repo/use.ts',
+    relativePath: 'use.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  })
+  vi.stubGlobal('api', {
+    fs: {
+      listFiles: async () => ['use.ts'],
+      readFile: async () => {
+        throw new Error('missing')
+      }
+    }
+  })
+  const locations = await queryWorkspaceSymbol(
+    monaco,
+    model,
+    new monaco.Position(model.getLineCount(), 7),
+    { isCancellationRequested: false, onCancellationRequested: () => ({ dispose() {} }) },
+    'definition'
+  )
+  expect(locations?.map(({ uri, range }) => [uri.toString(), range])).toEqual([
+    [
+      'file:///repo/use.ts',
+      { startLineNumber: 1, startColumn: 14, endLineNumber: 1, endColumn: 20 }
+    ]
+  ])
+})
+
 it('resolves aliases and reexports in the selected project and reads unsaved buffers on their owning host', async () => {
   const disk: Record<string, string> = {
     '/repo/tsconfig.json': '{ "references": [{"path":"./app"}, {"path":"./other"}], "files": [] }',

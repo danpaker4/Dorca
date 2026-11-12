@@ -51,6 +51,9 @@ vi.mock('./monaco-e2e-probe', () => ({ installMonacoE2EProbe: () => vi.fn() }))
 vi.mock('./monaco-editor-input-bindings', () => ({
   installMonacoEditorInputBindings: () => ({ disposeInputBindings: vi.fn() })
 }))
+vi.mock('./monaco-ts-workspace-intelligence', () => ({
+  registerEditorInstanceForTsWorkspace: () => vi.fn()
+}))
 
 afterEach(() => {
   cleanup()
