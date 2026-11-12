@@ -1,6 +1,6 @@
 import { useAppStore } from '@/store'
 import { getKeybindingContext } from '@/components/terminal-workspace-model'
-import { addAppKeyListener, removeAppKeyListener } from './app-keyboard-router'
+import { addAppKeyListener, removeAppKeyListener } from './keyboard/app-keyboard-router'
 import {
   applyHistoryEntry,
   resolveCurrentNavEntryFromStore

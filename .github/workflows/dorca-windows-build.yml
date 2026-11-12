@@ -1,0 +1,88 @@
+name: Dorca Windows build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dorca-windows-build-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'danpaker4/Dorca'
+    runs-on: windows-2025
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: pwsh
+    env:
+      ORCA_BACKGROUND_LAUNCH: '1'
+      ORCA_PNPM_GLOBAL_VIRTUAL_STORE: '0'
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      NODE_OPTIONS: --max-old-space-size=6144
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/install-node-dependencies
+        with:
+          native-runtime: node
+
+      - uses: ./.github/actions/install-mobile-dependencies
+
+      - name: Verify the upstream release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $release = Get-Content config/dorca-release.json | ConvertFrom-Json
+          $latest = gh api repos/stablyai/orca/releases/latest --jq .tag_name
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot verify the latest stable Orca release' }
+          if ($latest.Trim() -ne $release.upstreamTag) { throw 'Integrate the latest stable Orca before building' }
+          git fetch --no-tags https://github.com/stablyai/orca.git "refs/tags/$($release.upstreamTag)"
+          if ($LASTEXITCODE -ne 0) { throw 'Cannot fetch the upstream release' }
+          $commit = git rev-parse 'FETCH_HEAD^{commit}'
+          if ($commit.Trim() -ne $release.upstreamCommit) { throw 'Upstream release commit mismatch' }
+
+      - name: Check the combined fixes
+        run: >-
+          pnpm exec vitest run --config config/vitest.config.ts --maxWorkers=2
+          config/scripts/native-build/windows/build-windows-cli-launcher.test.mjs
+          config/scripts/native-build/windows/windows-rust-executable-cache.test.mjs
+          src/renderer/src/components/editor/monaco-ts-workspace-navigation.test.ts
+          src/main/git/source-control/inline-hunks-real-git.test.ts
+          config/scripts/dorca-release.test.mjs
+          config/scripts/dorca-upstream-integration.test.mjs
+
+      - name: Typecheck the integrated application
+        run: pnpm tc
+
+      - name: Build the application and Windows native components
+        run: pnpm run build:release
+
+      - name: Package the Windows installer
+        run: >-
+          pnpm exec electron-builder --config config/electron-builder.config.cjs
+          --win nsis --x64 --publish never
+
+      - name: Verify the installer and update metadata
+        run: node config/scripts/dorca-release.mjs verify
+
+      - name: Verify the packaged CLI launcher
+        run: |
+          & ./dist/win-unpacked/resources/bin/orca.exe --help
+          if ($LASTEXITCODE -ne 0) { throw 'Packaged Dorca CLI failed' }
+
+      - name: Retain the verified Windows build
+        uses: actions/upload-artifact@v7
+        with:
+          name: dorca-windows-${{ github.sha }}
+          path: |
+            dist/dorca-windows-setup.exe
+            dist/dorca-windows-setup.exe.blockmap
+            dist/latest.yml
+          if-no-files-found: error
+          retention-days: 14

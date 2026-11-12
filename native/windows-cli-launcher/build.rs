@@ -12,6 +12,7 @@ fn main() {
     println!("cargo:rerun-if-env-changed=ORCA_LAUNCHER_VERSION");
     println!("cargo:rerun-if-env-changed=ORCA_LAUNCHER_ICON");
     println!("cargo:rerun-if-env-changed=ORCA_LAUNCHER_FILENAME");
+    println!("cargo:rerun-if-env-changed=ORCA_LAUNCHER_APP_EXECUTABLE");
 
     if env::var("CARGO_CFG_TARGET_OS").as_deref() != Ok("windows") {
         return;

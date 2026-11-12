@@ -6,7 +6,7 @@ import { LoadingSpinner } from '@/components/LoadingSpinner'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { useEditorTypography } from '@/hooks/use-editor-typography'
-import { monacoTypographyOptions } from '@/lib/editor-typography'
+import { monacoTypographyOptions } from '@/lib/editor/appearance/editor-typography'
 import { useTranslate } from '@/i18n/use-translate'
 import type { GitInlineHunk } from '../../../../../shared/git/diff/git-inline-hunks'
 

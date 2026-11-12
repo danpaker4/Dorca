@@ -84,9 +84,6 @@ export function compileWindowsRustExecutable({
 
   mkdirSync(dirname(outputPath), { recursive: true })
   seedPrebuiltWindowsNatives()
-  if (existsSync(outputPath) && !existsSync(`${outputPath}.sha256`)) {
-    writeFileSync(`${outputPath}.sha256`, fingerprint)
-  }
   if (shouldReuseCompiledWindowsRustExecutable(outputPath, fingerprint)) {
     console.log(`[native-build] reusing ${label} at ${outputPath}`)
     return

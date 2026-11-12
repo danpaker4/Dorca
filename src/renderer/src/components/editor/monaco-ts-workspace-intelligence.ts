@@ -4,7 +4,7 @@ import type { editor } from 'monaco-editor'
 import { useAppStore } from '@/store'
 import { findFirstIndexedWorktree as findWorktreeById } from '@/lib/workspace/ownership/worktree-runtime-owner-index'
 import { selectWorktreesByRepo } from '@/store/workspaces/catalog/workspace-record-fields'
-import { getConnectionId } from '@/lib/connection-context'
+import { acquireEditorFileOperation } from '@/lib/editor/file-operations/editor-file-operation-owner'
 import { registerEditorForNavigationHistory } from '@/lib/workspace-navigation-history'
 import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
 import { modelContextByUri } from './monaco-ts-workspace-models'
@@ -47,20 +47,35 @@ export function registerEditorInstanceForTsWorkspace(
     ? findWorktreeById(selectWorktreesByRepo(state), worktreeId)
     : undefined
   const openFile = state.openFiles?.find((f) => f.id === fileId)
-  const resolvedRelativePath =
+  let resolvedRelativePath =
     openFile?.relativePath || (worktree ? computeRelativePath(worktree.path, filePath) : filePath)
 
-  if (worktree && worktreeId) {
+  if (openFile && worktreeId) {
     const modelUriStr = toEditorModelUri(filePath, modelOwnerKey)
-    modelContextByUri.set(modelUriStr, {
-      filePath,
-      relativePath: resolvedRelativePath,
-      worktreeId,
-      worktreePath: worktree.path,
-      modelOwnerKey,
-      runtimeEnvironmentId: openFile?.runtimeEnvironmentId,
-      connectionId: getConnectionId(worktreeId) ?? undefined
-    })
+    try {
+      const operation = acquireEditorFileOperation(useAppStore.getState, openFile)
+      const worktreePath = operation.context.worktreePath
+      if (worktreePath) {
+        resolvedRelativePath = openFile.relativePath || computeRelativePath(worktreePath, filePath)
+        modelContextByUri.set(modelUriStr, {
+          filePath,
+          fileId,
+          relativePath: resolvedRelativePath,
+          worktreeId,
+          worktreePath,
+          modelOwnerKey,
+          runtimeEnvironmentId: openFile?.runtimeEnvironmentId,
+          connectionId: operation.context.connectionId,
+          readContext: operation.context,
+          assertAuthorityCurrent: operation.assertAuthorityCurrent,
+          projectRootPath: operation.provenance.childRepo?.path
+        })
+      } else {
+        modelContextByUri.delete(modelUriStr)
+      }
+    } catch {
+      modelContextByUri.delete(modelUriStr)
+    }
   }
 
   const disposeNavHistory = registerEditorForNavigationHistory(

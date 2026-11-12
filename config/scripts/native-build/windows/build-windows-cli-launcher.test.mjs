@@ -12,6 +12,7 @@ import { dirname, join, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
 import { runProcessSync } from '@orca/process-host'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { verifyWindowsCliResolution } from './windows-cli-resolution-test-fixture.mjs'
 const projectRoot = resolve(import.meta.dirname, '../../../..')
 const WINDOWS_LOCK_CODES = ['EBUSY', 'ENOTEMPTY', 'EPERM']
 
@@ -71,6 +72,12 @@ function copySharedLauncher(target) {
 }
 
 describe('Windows CLI launcher', () => {
+  itWindows(
+    'uses its packaged identity without falling back to Orca and preserves server mode',
+    () => {
+      verifyWindowsCliResolution(sharedLauncherPath, 'Dorca.exe')
+    }
+  )
   itWindows('reuses the hook host target while invalidating changed inputs', () => {
     const root = mkdtempSync(join(tmpdir(), 'orca-hook-target-'))
     try {
@@ -172,7 +179,7 @@ describe('Windows CLI launcher', () => {
       const cliPath = join(resourcesPath, 'app.asar.unpacked', 'out', 'cli', 'index.js')
       mkdirSync(join(resourcesPath, 'bin'), { recursive: true })
       mkdirSync(dirname(cliPath), { recursive: true })
-      copyFileSync(process.execPath, join(appRoot, 'Orca.exe'))
+      copyFileSync(process.execPath, join(appRoot, 'Dorca.exe'))
       writeFileSync(
         cliPath,
         `process.stdout.write(JSON.stringify({
@@ -369,7 +376,7 @@ describe('Windows CLI launcher', () => {
       const harnessPath = join(appRoot, 'DuplicatePathLauncher.exe')
       mkdirSync(dirname(launcherPath), { recursive: true })
       mkdirSync(dirname(cliPath), { recursive: true })
-      copyFileSync(process.execPath, join(appRoot, 'Orca.exe'))
+      copyFileSync(process.execPath, join(appRoot, 'Dorca.exe'))
       writeFileSync(
         cliPath,
         `require('node:fs').writeFileSync(process.env.ORCA_TEST_OUTPUT, JSON.stringify({

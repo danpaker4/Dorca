@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { dirname, join, resolve } from 'node:path'
+import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { compileWindowsRustExecutable } from './windows-rust-executable-build.mjs'
 
@@ -13,6 +14,9 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   const repoRoot = resolve(import.meta.dirname, '../../../..')
   const crateRoot = join(repoRoot, 'native', 'windows-cli-launcher')
   const iconPath = join(repoRoot, 'resources', 'build', 'icon.ico')
+  const packagingConfigPath = join(repoRoot, 'config', 'electron-builder.config.cjs')
+  const packaging = createRequire(import.meta.url)(packagingConfigPath)
+  const appExecutable = `${packaging.win.executableName ?? packaging.productName}.exe`
   const output = readArg('--output') ?? join(crateRoot, '.build', 'orca.exe')
   for (const binName of ['orca', 'orca-administrator-restart']) {
     compileWindowsRustExecutable({
@@ -25,6 +29,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
         join(crateRoot, 'src', 'administrator_restart.rs'),
         join(crateRoot, 'src', 'administrator_launcher.rs'),
         iconPath,
+        packagingConfigPath,
         join(repoRoot, 'config/scripts/native-build/windows/build-windows-cli-launcher.mjs')
       ],
       arch: readArg('--arch'),
@@ -32,7 +37,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       buildEnv: (version) => ({
         ORCA_LAUNCHER_VERSION: version,
         ORCA_LAUNCHER_ICON: iconPath,
-        ORCA_LAUNCHER_FILENAME: `${binName}.exe`
+        ORCA_LAUNCHER_FILENAME: `${binName}.exe`,
+        ORCA_LAUNCHER_APP_EXECUTABLE: appExecutable
       })
     })
   }

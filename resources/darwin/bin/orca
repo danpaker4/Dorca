@@ -19,7 +19,11 @@ if [ -z "$APP_PATH" ]; then
 fi
 
 CONTENTS="$APP_PATH/Contents"
-ELECTRON="$CONTENTS/MacOS/Orca"
+EXECUTABLE="Orca"
+if [ -f "$CONTENTS/Info.plist" ]; then
+	EXECUTABLE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$CONTENTS/Info.plist")"
+fi
+ELECTRON="$CONTENTS/MacOS/$EXECUTABLE"
 # The unpacked entrypoint runs directly in Electron's Node mode.
 CLI="$CONTENTS/Resources/app.asar.unpacked/out/cli/index.js"
 

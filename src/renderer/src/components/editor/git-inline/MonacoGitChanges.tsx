@@ -7,8 +7,8 @@ import {
   selectWorktreesByRepo,
   selectFolderWorkspaces
 } from '@/store/workspaces/catalog/workspace-record-fields'
-import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
-import { useWorktreeGitCopyHostId } from '@/lib/worktree-git-copy'
+import { installWindowVisibilityInterval } from '@/lib/window-activity/window-visibility-interval'
+import { useWorktreeGitCopyHostId } from '@/lib/workspace/ownership/worktree-git-copy'
 import { getRuntimeGitInlineSnapshot } from '@/runtime/source-control/git/runtime-git-inline-client'
 import {
   getGitInlineHunks,

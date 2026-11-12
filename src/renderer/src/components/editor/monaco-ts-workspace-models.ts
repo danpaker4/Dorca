@@ -1,20 +1,24 @@
 import type * as Monaco from 'monaco-editor'
-import { URI } from 'monaco-editor/esm/vs/base/common/uri.js'
 import { useAppStore } from '@/store'
-import { findFirstIndexedWorktree as findWorktreeById } from '@/lib/workspace/ownership/worktree-runtime-owner-index'
-import { selectWorktreesByRepo } from '@/store/workspaces/catalog/workspace-record-fields'
-import { getConnectionId } from '@/lib/connection-context'
+import type { RuntimeFileOperationArgs } from '@/runtime/files/runtime-file-client-types'
+import { readRuntimeFileContent } from '@/runtime/files/reads/runtime-file-read-client'
 import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
-import { normalizeSlashes, computeRelativePath } from './monaco-ts-workspace-imports'
+import { computeRelativePath } from './monaco-ts-workspace-imports'
+import { normalizeProjectPath } from './monaco-ts-project-protocol'
+import { isKeptEditorBufferView } from '@/store/slices/editor/buffers/editor-buffer-kept'
 
 export type ModelWorkspaceContext = {
   filePath: string
+  fileId?: string
   relativePath: string
   worktreeId: string
   worktreePath: string
   modelOwnerKey?: string
   runtimeEnvironmentId?: string | null
   connectionId?: string
+  readContext: RuntimeFileOperationArgs
+  assertAuthorityCurrent: () => void
+  projectRootPath?: string
 }
 
 export const modelContextByUri = new Map<string, ModelWorkspaceContext>()
@@ -46,39 +50,7 @@ function toMonacoTsLanguageId(filePath: string): 'typescript' | 'javascript' {
 }
 
 export function resolveModelContext(modelUriStr: string): ModelWorkspaceContext | null {
-  const existing = modelContextByUri.get(modelUriStr)
-  if (existing) {
-    return existing
-  }
-  const state = useAppStore.getState()
-  const worktreesByRepo = selectWorktreesByRepo(state)
-  for (const openFile of state.openFiles ?? []) {
-    const worktree = findWorktreeById(worktreesByRepo, openFile.worktreeId)
-    if (!worktree) {
-      continue
-    }
-    const candidateUri = toEditorModelUri(openFile.filePath, '')
-    const parsedUri = URI.parse(modelUriStr)
-    if (
-      candidateUri === modelUriStr ||
-      normalizeSlashes(openFile.filePath).toLowerCase() ===
-        normalizeSlashes(URI.file(parsedUri.path).fsPath).toLowerCase()
-    ) {
-      const ctx: ModelWorkspaceContext = {
-        filePath: openFile.filePath,
-        relativePath:
-          openFile.relativePath || computeRelativePath(worktree.path, openFile.filePath),
-        worktreeId: openFile.worktreeId,
-        worktreePath: worktree.path,
-        modelOwnerKey: '',
-        runtimeEnvironmentId: openFile.runtimeEnvironmentId,
-        connectionId: getConnectionId(openFile.worktreeId) ?? undefined
-      }
-      modelContextByUri.set(modelUriStr, ctx)
-      return ctx
-    }
-  }
-  return null
+  return modelContextByUri.get(modelUriStr) ?? null
 }
 
 export function registerTargetUriContext(
@@ -94,20 +66,47 @@ export function registerTargetUriContext(
       worktreePath: parentCtx.worktreePath,
       modelOwnerKey: parentCtx.modelOwnerKey,
       runtimeEnvironmentId: parentCtx.runtimeEnvironmentId,
-      connectionId: parentCtx.connectionId
+      connectionId: parentCtx.connectionId,
+      readContext: parentCtx.readContext,
+      assertAuthorityCurrent: parentCtx.assertAuthorityCurrent,
+      projectRootPath: parentCtx.projectRootPath
     })
   }
   return targetUriStr
 }
 
 export async function ensureCandidateFileModel(
-  monaco: typeof Monaco,
+  monaco: Pick<typeof Monaco, 'editor' | 'Uri'>,
   parentCtx: ModelWorkspaceContext,
-  candidateFilePath: string
+  candidateFilePath: string,
+  snapshot?: string
 ): Promise<Monaco.editor.ITextModel | null> {
   const targetUriStr = registerTargetUriContext(parentCtx, candidateFilePath)
   const targetUri = monaco.Uri.parse(targetUriStr)
   const existingModel = monaco.editor.getModel(targetUri)
+  const hasRetainedBuffer = (): boolean => {
+    const state = useAppStore.getState()
+    const fileId = modelContextByUri.get(targetUriStr)?.fileId
+    return (
+      (fileId !== undefined && isKeptEditorBufferView(state.editorBufferKept ?? {}, fileId)) ||
+      (state.openFiles?.some(
+        (file) =>
+          file.worktreeId === parentCtx.worktreeId &&
+          (file.runtimeEnvironmentId ?? null) === (parentCtx.runtimeEnvironmentId ?? null) &&
+          normalizeProjectPath(file.filePath) === normalizeProjectPath(candidateFilePath)
+      ) ??
+        false)
+    )
+  }
+  if (snapshot !== undefined) {
+    if (existingModel && !hasRetainedBuffer() && existingModel.getValue() !== snapshot) {
+      existingModel.setValue(snapshot)
+    }
+    return (
+      existingModel ??
+      monaco.editor.createModel(snapshot, toMonacoTsLanguageId(candidateFilePath), targetUri)
+    )
+  }
   const now = Date.now()
   const lastHydrated = hydratedFileStamps.get(targetUriStr) ?? 0
 
@@ -115,30 +114,27 @@ export async function ensureCandidateFileModel(
     return existingModel
   }
 
-  const state = useAppStore.getState()
-  const isOpenInTab = state.openFiles?.some(
-    (f) =>
-      f.worktreeId === parentCtx.worktreeId &&
-      normalizeSlashes(f.filePath).toLowerCase() ===
-        normalizeSlashes(candidateFilePath).toLowerCase()
-  )
-  if (existingModel && isOpenInTab) {
+  if (existingModel && hasRetainedBuffer()) {
     hydratedFileStamps.set(targetUriStr, now)
     return existingModel
   }
 
   try {
-    const fileRes = await window.api.fs.readFile({
+    parentCtx.assertAuthorityCurrent()
+    const fileRes = await readRuntimeFileContent({
+      ...parentCtx.readContext,
+      worktreeId: parentCtx.worktreeId,
       filePath: candidateFilePath,
-      connectionId: parentCtx.connectionId
+      relativePath: computeRelativePath(parentCtx.worktreePath, candidateFilePath)
     })
+    parentCtx.assertAuthorityCurrent()
     if (fileRes.isBinary || typeof fileRes.content !== 'string') {
       return existingModel
     }
     hydratedFileStamps.set(targetUriStr, now)
     const rechecked = monaco.editor.getModel(targetUri)
     if (rechecked) {
-      if (!isOpenInTab && rechecked.getValue() !== fileRes.content) {
+      if (!hasRetainedBuffer() && rechecked.getValue() !== fileRes.content) {
         rechecked.setValue(fileRes.content)
       }
       return rechecked
