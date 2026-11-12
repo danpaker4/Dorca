@@ -27,14 +27,12 @@ const hydratedFileStamps = new Map<string, number>()
 
 const HYDRATION_CACHE_TTL_MS = 15_000
 
-export function isTsOrJsLanguageId(langId: string): boolean {
-  return (
-    langId === 'typescript' ||
-    langId === 'javascript' ||
-    langId === 'typescriptreact' ||
-    langId === 'javascriptreact'
-  )
-}
+export const TS_WORKSPACE_LANGUAGE_IDS = [
+  'typescript',
+  'javascript',
+  'typescriptreact',
+  'javascriptreact'
+]
 
 function toMonacoTsLanguageId(filePath: string): 'typescript' | 'javascript' {
   const lower = filePath.toLowerCase()

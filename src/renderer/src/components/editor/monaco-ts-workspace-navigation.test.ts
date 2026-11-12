@@ -95,8 +95,6 @@ it('does not turn unrelated Server name matches into definitions or references',
   }
   registerWorkspaceDefinitions(api)
   registerWorkspaceReferences(api)
-  api.languages.registerDefinitionProvider('typescript', { provideDefinition: () => [] })
-  api.languages.registerReferenceProvider('typescript', { provideReferences: () => [] })
   const token = {
     isCancellationRequested: false,
     onCancellationRequested: () => ({ dispose() {} })
@@ -145,6 +143,52 @@ it('resolves a source definition when ignored build output would exhaust the pro
       'file:///repo/server.ts',
       { startLineNumber: 1, startColumn: 14, endLineNumber: 1, endColumn: 20 }
     ]
+  ])
+})
+
+it('registers workspace definitions without waiting for another provider to register', async () => {
+  const model = monaco.editor.createModel(
+    'export class Server {}\nnew Server()',
+    'typescript',
+    monaco.Uri.file('/repo/use.ts')
+  )
+  modelContextByUri.set(model.uri.toString(), {
+    filePath: '/repo/use.ts',
+    relativePath: 'use.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  })
+  vi.stubGlobal('api', {
+    fs: {
+      listFiles: async () => ['use.ts'],
+      readFile: async () => {
+        throw new Error('missing')
+      }
+    }
+  })
+  const providers: monaco.languages.DefinitionProvider[] = []
+  registerWorkspaceDefinitions({
+    ...monaco,
+    languages: {
+      ...monaco.languages,
+      registerDefinitionProvider: (_selector, provider) => {
+        providers.push(provider)
+        return { dispose() {} }
+      }
+    }
+  })
+  const token = {
+    isCancellationRequested: false,
+    onCancellationRequested: () => ({ dispose() {} })
+  }
+  const locations = await providers[0]?.provideDefinition(model, new monaco.Position(2, 7), token)
+  expect(locations).toMatchObject([
+    {
+      uri: { path: '/repo/use.ts' },
+      range: { startLineNumber: 1, startColumn: 14, endLineNumber: 1, endColumn: 20 }
+    }
   ])
 })
 

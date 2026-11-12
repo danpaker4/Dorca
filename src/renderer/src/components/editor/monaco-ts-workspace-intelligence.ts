@@ -26,6 +26,17 @@ export function installMonacoTypeScriptWorkspaceIntelligence(monaco: typeof Mona
   monaco.typescript.typescriptDefaults.setCompilerOptions(sharedCompilerOptions)
   monaco.typescript.javascriptDefaults.setCompilerOptions(sharedCompilerOptions)
 
+  for (const defaults of [
+    monaco.typescript.typescriptDefaults,
+    monaco.typescript.javascriptDefaults
+  ]) {
+    defaults.setModeConfiguration({
+      ...defaults.modeConfiguration,
+      definitions: false,
+      references: false
+    })
+  }
+
   registerWorkspaceReferences(monaco)
   registerWorkspaceDefinitions(monaco)
   registerWorkspaceEditorOpener(monaco)
