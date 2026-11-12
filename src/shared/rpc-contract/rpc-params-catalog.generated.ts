@@ -250,6 +250,7 @@ import {
   FileReadChunk,
   FileSearch,
   FileTreePath,
+  FileTypeScriptNavigation,
   FileUnwatch,
   ResolveTerminalPath,
   ServerDirectoryBrowse
@@ -1085,6 +1086,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'files.searchPaths': FilePathSearch,
   'files.stat': FileTreePath,
   'files.statTerminalArtifact': TerminalArtifactFile,
+  'files.typescriptNavigation': FileTypeScriptNavigation,
   'files.unwatch': FileUnwatch,
   'files.watch': FileWatch,
   'files.write': FileWrite,

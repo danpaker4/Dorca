@@ -7,7 +7,8 @@ import { selectWorktreesByRepo } from '@/store/workspaces/catalog/workspace-reco
 import { acquireEditorFileOperation } from '@/lib/editor/file-operations/editor-file-operation-owner'
 import { registerEditorForNavigationHistory } from '@/lib/workspace-navigation-history'
 import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
-import { modelContextByUri } from './monaco-ts-workspace-models'
+import { modelContextByUri, TS_WORKSPACE_LANGUAGE_IDS } from './monaco-ts-workspace-models'
+import { prepareHostTypeScriptNavigation } from './monaco-ts-host-navigation'
 import { computeRelativePath } from './monaco-ts-workspace-imports'
 import { registerWorkspaceReferences } from './monaco-ts-workspace-references'
 import { registerWorkspaceDefinitions } from './monaco-ts-workspace-definitions'
@@ -81,6 +82,11 @@ export function registerEditorInstanceForTsWorkspace(
           assertAuthorityCurrent: operation.assertAuthorityCurrent,
           projectRootPath: operation.provenance.childRepo?.path
         })
+        const model = editorInstance.getModel()
+        const context = modelContextByUri.get(modelUriStr)
+        if (model && context && TS_WORKSPACE_LANGUAGE_IDS.includes(model.getLanguageId())) {
+          prepareHostTypeScriptNavigation(context, model)
+        }
       } else {
         modelContextByUri.delete(modelUriStr)
       }

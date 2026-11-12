@@ -13,10 +13,14 @@ export type TypeScriptProjectQuery = {
   includeDeclaration: boolean
   fileNames: string[]
   files: Record<string, string | null>
+  referenceFileNames?: string[]
+  referenceNames?: string[]
 }
 
 export type TypeScriptProjectResult = {
   missingFiles: string[]
+  missingPaths: string[]
+  referenceNames: string[]
   locations: { filePath: string; range: languages.Location['range'] }[]
 }
 

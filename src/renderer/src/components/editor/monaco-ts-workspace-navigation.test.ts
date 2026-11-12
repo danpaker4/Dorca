@@ -288,6 +288,13 @@ it('resolves aliases and reexports in the selected project and reads unsaved buf
   })
   vi.stubGlobal('api', {
     fs: {
+      search: async ({ query, connectionId }: { query: string; connectionId?: string }) => ({
+        files: Object.entries(connectionId === 'host' ? disk : {})
+          .filter(([, content]) => new RegExp(query).test(content))
+          .map(([filePath]) => ({ filePath, relativePath: filePath.slice(6), matches: [] })),
+        totalMatches: 0,
+        truncated: false
+      }),
       listFiles: async ({ connectionId }: { connectionId?: string }) => {
         if (connectionId !== 'host') {
           throw new Error('wrong host')

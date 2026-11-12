@@ -36,6 +36,10 @@ import { stageOrcadWindowsProcessTree } from './orcad-windows-process-tree.mjs'
 import { stageOrcadWindowsCliLauncher } from './orcad-windows-cli-launcher.mjs'
 import { stageOrcadWindowsSecurity } from './orcad-windows-security.mjs'
 import { stageOrcadLinearSdk } from './orcad-linear-sdk-package.mjs'
+import {
+  assertTypeScriptLanguageServerInstalled,
+  copyPackagedTypeScriptLanguageServer
+} from '../../../packaged-typescript-language-server.cjs'
 import { stageOrcadMobileWebBundle } from './orcad-mobile-web-bundle.mjs'
 import {
   ORCAD_EMOJI_SHORTCODE_DATASET,
@@ -170,6 +174,8 @@ writeFileSync(
   `${runtimeAsset.executableSha256}\n`
 )
 stageNodePty(BUILD_TARGET)
+assertTypeScriptLanguageServerInstalled(targetPlatform, targetArch, ROOT)
+copyPackagedTypeScriptLanguageServer(OUT_DIR, targetPlatform, targetArch, ROOT)
 await stageParcelWatcher(BUILD_TARGET)
 stageOrcadWindowsProcessTree(ROOT, OUT_DIR, BUILD_TARGET)
 stageOrcadWindowsCliLauncher(ROOT, OUT_DIR, BUILD_TARGET)

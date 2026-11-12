@@ -64,9 +64,42 @@ node --input-type=module -e "import { verifyWindowsCliResolution } from './confi
 ## Limits
 
 - This fixes the existing JavaScript/TypeScript navigation paths, including JSX and TSX parsing. It does not install language servers for Python, Go, C#, Java, or other languages.
-- References cover the selected configured project and its imported dependency graph. They are not a tsserver solution-wide search through every separately configured consuming project. Project references select the configuration owning the source file.
-- Without configuration, files are treated as modules to avoid conflating unrelated script globals. Cross-file ambient script globals need a project configuration.
-- Files, extended configurations, and definitions outside the owning workspace/child root are not loaded. Ignored files absent from inventory and older remote hosts with bounded inventories can limit reference completeness.
-- Discovery is bounded to 100,000 inventory entries, 20,000 requested files, 64 MiB of UTF-16 snapshots, and 32 resolution rounds. Exhaustion, cancellation, owner changes, and errors return no locations. Cold queries still load project data; this is not a persistent background index.
+- Worker fallback references cover the selected configured project and its imported dependency graph. They are not a tsserver solution-wide search through every separately configured consuming project. Project references select the configuration owning the source file.
+- Without configuration, worker fallback files are treated as modules to avoid conflating unrelated script globals. Cross-file ambient script globals need a project configuration.
+- The worker fallback does not load files, extended configurations, or definitions outside the owning workspace/child root. Ignored files absent from inventory and older remote hosts with bounded inventories can limit reference completeness.
+- Worker discovery is bounded to 100,000 inventory entries, 100,000 loaded source files, 1,000,000 resolution paths, and 128 MiB of UTF-16 snapshots. Exhaustion, cancellation, owner changes, and errors return no locations. Its cold queries still load project data; it is not a persistent background index.
 - Windows MSVC/ARM64 packaging, macOS execution, and a full Electron interaction run were not performed. The available MSVC setup lacked `link.exe`; debug validation used MinGW instead. The existing optimized native-build test suite and release builds were not invoked.
 - The installed application and launcher remain unchanged. These source fixes are ready for review and later inclusion in a release that incorporates the then-current stable upstream Orca.
+
+## Large-project reference follow-up
+
+The renderer project's reference query reproduced an empty result after the original 64 MiB snapshot budget was exhausted. Increasing the budget alone exposed a second failure: constructing a complete program for the entire project could exhaust the worker heap.
+
+Reference discovery now searches the owning host for candidate files and expands that set using the import and reexport aliases reported by TypeScript. Open and retained buffers participate independently of disk search. TypeScript verifies every returned location; text matches never become reference locations. Declaration files retain their project context, and configured ambient script queries retain the full configured project. Unsupported or truncated candidate searches fall back to the configured-project scan within the resource bounds above.
+
+File-existence probes are separate from source snapshots and use the existing batched runtime API. Missing module guesses no longer count as loaded source files. Discovery respects TypeScript's default exclusion of JavaScript implementation files under node_modules and loads type-reference directives before building the language-service program. Inventory, import scans, completed module resolutions, candidate searches, and the completed language service are reused while the owning session remains current.
+
+Both new size regressions returned no references against the original implementation and pass with the fix. Coverage also exercises renamed reexport chains, unrelated same-name symbols, configured script globals, and SSH-owned unsaved buffers.
+
+A temporary, in-process diagnostic against this checkout returned the five expected references to `registerWorkspaceDefinitions`. Its cold scan completed in approximately 36 seconds; the repeated query completed in approximately 0.29 seconds. These are diagnostic measurements, not Electron interaction timings or test assertions. The diagnostic harness was removed. No installed application was rebuilt or replaced.
+
+## Native TypeScript navigation
+
+Configured projects now use Microsoft's native TypeScript 7 language server through its LSP interface. This is the same engine used by Microsoft's native TypeScript VS Code extension. Dorca keeps a server alive per owning client and workspace, prepares the project when a TypeScript editor opens, and shares its project state across definition and reference requests. The browser worker starts only when the native host is unavailable. Unconfigured reference searches retain the worker path so unopened consumers remain discoverable.
+
+The native process runs on the filesystem-owning desktop or paired host. It receives open buffers and retained drafts, including unsaved imports, and closes overlays removed from the next captured request. Filesystem events update its project state. Authorization, captured environment pairing revisions, buffer versions, and logical owner paths remain enforced. The compiler resolves configured dependencies on its host, including external configuration dependencies; returned navigation targets stay within the owning root. SSH-backed desktop files and older hosts retain the existing worker fallback. The inventory and snapshot bounds above apply to that fallback, rather than the native server.
+
+Desktop resources and paired-host distributions include the target-platform native executable, its matching standard libraries, and Microsoft license notices. No workspace executable or PATH lookup is used. Servers stop after five idle minutes; the pool admits at most four servers, evicting idle entries first. A failed native process falls back to the worker.
+
+The reproducible production-transport benchmark is:
+
+```powershell
+$env:ORCA_BACKGROUND_LAUNCH='1'
+node config/scripts/performance/editor-navigation/benchmark-typescript-navigation.mjs
+```
+
+On this Windows x64 checkout it measured 3.95 seconds for a cold reference query, 145 ms for a repeated query, 2.84 seconds for background preparation, and 204 ms for the first reference query after preparation. It stages the packaged binary and standard libraries and uses Dorca's actual worker-thread process transport. It verifies the three call references with declarations excluded. These are diagnostic measurements, not timing assertions or full Electron interaction measurements.
+
+The staged native-server integration tests verify renamed imports and reexports, unrelated same-name symbols, definition targets, unsaved buffers, UTF-16 positions after an emoji, and disk restoration after a draft closes. Native execution has been verified on Windows x64; macOS/Linux packaging paths have not been executed here. The installed application remains unchanged until these source changes are built and installed.
+
+Final validation passed: 50 tests across eight focused navigation, artifact, and packaging suites (one existing skip), Node/web/CLI typechecks, changed-code quality, formatting, the generated standard-library manifest check, and the flaky-test ratchet. The full Electron Vite production build also passed, including preload and renderer boot-graph verification. No visible application window was launched or installed application replaced.

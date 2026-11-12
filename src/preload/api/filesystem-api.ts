@@ -1,4 +1,8 @@
 import type { PathExistenceResult } from '../../shared/file-access/path-existence-batch'
+import type {
+  TypeScriptNavigationRequest,
+  TypeScriptNavigationResult
+} from '../../shared/editor-language/typescript-navigation'
 import type { RuntimeFileReadChunkResult } from '../../shared/file-content/runtime-file-read'
 import type { SearchOptions, SearchResult } from '../../shared/file-search/code-search-types'
 import type { PdfExportResult } from '../../shared/pdf-export-failure-copy'
@@ -194,6 +198,9 @@ export type FilesystemApi = {
       filePaths: string[]
       connectionId?: string
     }) => Promise<PathExistenceResult[]>
+    typescriptNavigation?: (
+      args: TypeScriptNavigationRequest & { connectionId?: string }
+    ) => Promise<TypeScriptNavigationResult>
     pathExists: (args: {
       filePath: string
       connectionId?: string

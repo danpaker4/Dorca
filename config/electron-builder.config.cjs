@@ -27,6 +27,10 @@ const {
 } = require('./packaged-runtime-node-modules.cjs')
 const { copyPackagedTranscribeCpp } = require('./packaged-transcribe-cpp.cjs')
 const {
+  copyPackagedTypeScriptLanguageServer,
+  assertTypeScriptLanguageServerInstalled
+} = require('./packaged-typescript-language-server.cjs')
+const {
   assertNoWindowsExecutablesInRuntimeNodeModules
 } = require('./packaged-windows-only-runtime-files.cjs')
 const {
@@ -394,6 +398,10 @@ module.exports = {
     // The template is the server every SSH host gets, so a dark test template must never ship.
     assertNotDarkBuild([join(__dirname, '..', 'out', 'main'), mobileWebBundleDir, orcadTemplateDir])
     assertPackagedNativeVariantsInstalled(context.electronPlatformName, context.arch)
+    assertTypeScriptLanguageServerInstalled(
+      context.electronPlatformName,
+      normalizeElectronArchitecture(context.arch)
+    )
     assertBundledRipgrepInstalled()
     assertProcessHostOutputBuilt()
     assertOrcadTemplateBuilt()
@@ -441,6 +449,11 @@ module.exports = {
       writeMacBuildCompatibility(resourcesDir, { version, commit, architecture })
     }
     stampPackagedCliVersion(resourcesDir, context.packager.appInfo.version)
+    copyPackagedTypeScriptLanguageServer(
+      resourcesDir,
+      context.electronPlatformName,
+      normalizeElectronArchitecture(context.arch)
+    )
     // Before the prune, which drops the copied packages' type declarations too.
     copyPackagedTranscribeCpp(
       readPackage,

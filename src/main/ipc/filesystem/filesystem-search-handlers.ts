@@ -7,8 +7,10 @@ import {
 } from '../../../shared/file-listing/file-name-filter-tokens'
 import type { FilesystemHandlerContext } from './filesystem-handler-context'
 import { registerFilesystemContentSearchHandler } from './filesystem-content-search-handler'
+import { registerFilesystemTypeScriptNavigation } from './filesystem-typescript-navigation'
 
 export function registerFilesystemSearchHandlers(context: FilesystemHandlerContext): void {
+  registerFilesystemTypeScriptNavigation(context)
   registerFilesystemContentSearchHandler(context)
   const { store } = context
   const { listFilesCancellations } = context

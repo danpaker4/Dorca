@@ -8,6 +8,8 @@ type NavigationSession = {
   context: ModelWorkspaceContext
   worker: Monaco.editor.MonacoWebWorker<TypeScriptProjectWorker>
   files: Record<string, string | null>
+  existingPaths: Set<string>
+  referenceSearches: Map<string, string[]>
   inventory?: string[]
   watching: boolean
   revision: number
@@ -29,16 +31,21 @@ export function acquireNavigationSession(
   }
   if (!session) {
     let unsubscribe: (() => void) | undefined
-    const worker = monaco.editor.createWebWorker<TypeScriptProjectWorker>({
-      worker: new Worker(new URL('./monaco-ts-workspace.worker.ts', import.meta.url), {
-        type: 'module',
-        name: 'typescript-workspace'
-      })
-    })
+    let worker: Monaco.editor.MonacoWebWorker<TypeScriptProjectWorker> | undefined
     const created: NavigationSession = {
       context,
-      worker,
+      get worker() {
+        worker ??= monaco.editor.createWebWorker<TypeScriptProjectWorker>({
+          worker: new Worker(new URL('./monaco-ts-workspace.worker.ts', import.meta.url), {
+            type: 'module',
+            name: 'typescript-workspace'
+          })
+        })
+        return worker
+      },
       files: {},
+      existingPaths: new Set(),
+      referenceSearches: new Map(),
       watching: false,
       revision: 0,
       dispose() {
@@ -49,13 +56,15 @@ export function acquireNavigationSession(
         clearTimeout(created.timer)
         unsubscribe?.()
         lifetime.dispose()
-        worker.dispose()
+        worker?.dispose()
       }
     }
     const lifetime = model.onWillDispose(() => created.dispose())
     sessions.set(model, created)
     const invalidate = (): void => {
       created.files = {}
+      created.existingPaths.clear()
+      created.referenceSearches.clear()
       created.inventory = undefined
       created.revision++
     }

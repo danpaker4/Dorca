@@ -5,6 +5,35 @@ import { QUICK_OPEN_REMOTE_QUERY_MAX_CODE_UNITS } from '../quick-open/quick-open
 import { RUNTIME_NAVIGATION_TARGETS } from '../runtime-navigation'
 import { FileOpen, WorktreeSelector } from './files-target-params'
 
+export const TypeScriptNavigationPayload = z
+  .object({
+    rootPath: z.string().min(1).max(32_768),
+    filePath: z.string().min(1).max(32_768),
+    kind: z.enum(['prepare', 'definition', 'references']),
+    lineNumber: z.number().int().min(1),
+    column: z.number().int().min(1),
+    includeDeclaration: z.boolean(),
+    buffers: z
+      .array(
+        z.object({
+          filePath: z.string().min(1).max(32_768),
+          content: z.string().max(16 * 1024 * 1024),
+          languageId: z.string().max(64)
+        })
+      )
+      .max(512)
+  })
+  .refine(
+    (request) =>
+      request.buffers.reduce((sum, buffer) => sum + buffer.content.length * 2, 0) <=
+      32 * 1024 * 1024,
+    { message: 'TypeScript navigation buffers exceed their transfer budget' }
+  )
+
+export const FileTypeScriptNavigation = TypeScriptNavigationPayload.safeExtend(
+  WorktreeSelector.shape
+)
+
 export const FilePathsExist = WorktreeSelector.extend({
   relativePaths: z.array(z.string()).max(PATH_EXISTENCE_BATCH_MAX)
 })

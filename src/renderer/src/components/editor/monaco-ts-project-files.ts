@@ -7,19 +7,38 @@ import {
   type TypeScriptProjectQuery
 } from './monaco-ts-project-protocol'
 
+type ProjectDirectory = { files: Set<string>; directories: Set<string> }
+
 export class ProjectFiles {
   readonly missing = new Set<string>()
+  readonly missingPaths = new Set<string>()
+  unresolvedAccesses = 0
   readonly root: string
   readonly names: string[]
   private readonly knownNames: Set<string>
-  private readonly directories = new Map<string, { files: Set<string>; directories: Set<string> }>()
+  private readonly directories: Map<string, ProjectDirectory>
   private readonly contents = new Map<string, string | null>()
 
-  constructor(readonly request: TypeScriptProjectQuery) {
+  constructor(
+    readonly request: TypeScriptProjectQuery,
+    previous?: ProjectFiles
+  ) {
     this.root = normalizeProjectPath(request.rootPath)
-    this.names = request.fileNames.map(normalizeProjectPath)
+    const reuse =
+      previous?.root === this.root &&
+      previous.names.length <= request.fileNames.length &&
+      previous.names.every(
+        (name, index) =>
+          name === request.fileNames[index] ||
+          name === normalizeProjectPath(request.fileNames[index])
+      )
+    this.names = reuse ? [...previous.names] : []
+    this.directories = reuse ? previous.directories : new Map()
     this.knownNames = new Set(this.names)
-    for (const name of this.names) {
+    for (const rawName of request.fileNames.slice(this.names.length)) {
+      const name = normalizeProjectPath(rawName)
+      this.names.push(name)
+      this.knownNames.add(name)
       let path = name
       let isFile = true
       while (isInsideProject(this.root, path) && path !== this.root) {
@@ -51,6 +70,7 @@ export class ProjectFiles {
     }
     if (!this.contents.has(path)) {
       this.missing.add(path)
+      this.unresolvedAccesses++
     }
     return this.contents.get(path) ?? undefined
   }
@@ -66,7 +86,8 @@ export class ProjectFiles {
     if (this.knownNames.has(path)) {
       return true
     }
-    this.missing.add(path)
+    this.missingPaths.add(path)
+    this.unresolvedAccesses++
     return false
   }
 

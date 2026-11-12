@@ -86,6 +86,10 @@ jobs:
           config/scripts/dorca-mac-assets.test.mjs
           config/scripts/dorca-upstream-integration.test.mjs
           config/scripts/desktop-distribution/runtime-verification/electron-builder-config.test.mjs
+          src/main/typescript-navigation/typescript-language-server.test.ts
+          src/renderer/src/components/editor/monaco-ts-project-service.test.ts
+          src/renderer/src/components/editor/monaco-ts-workspace-navigation.test.ts
+          src/renderer/src/components/editor/monaco-ts-workspace-reference-limits.test.ts
           src/main/updater/releases/updater-prerelease-feed.test.ts
           src/main/updater/releases/updater-prerelease-feed-readiness.test.ts
           src/main/updater/releases/updater-release-builds.test.ts

@@ -1,4 +1,8 @@
 import type { PathExistenceResult } from '../../shared/file-access/path-existence-batch'
+import type {
+  TypeScriptNavigationRequest,
+  TypeScriptNavigationResult
+} from '../../shared/editor-language/typescript-navigation'
 import { ipcRenderer, webUtils } from 'electron'
 import type {
   PrepareDroppedPathsRequest,
@@ -214,6 +218,9 @@ export const fsApi = {
     followSymlinks?: boolean
     nameFilter?: string
   }): Promise<string[]> => ipcRenderer.invoke('fs:listFiles', args),
+  typescriptNavigation: (
+    args: TypeScriptNavigationRequest & { connectionId?: string }
+  ): Promise<TypeScriptNavigationResult> => ipcRenderer.invoke('fs:typescriptNavigation', args),
   cancelListFiles: (args: { requestToken: string }): Promise<void> =>
     ipcRenderer.invoke('fs:cancelListFiles', args),
   cancelSearch: (args: { requestToken: string }): Promise<void> =>

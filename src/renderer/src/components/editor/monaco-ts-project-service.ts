@@ -1,13 +1,15 @@
+import { queryProjectLocations } from './monaco-ts-project-locations'
+import { createProjectService } from './monaco-ts-language-service'
 import { ProjectFiles } from './monaco-ts-project-files'
 import { typescript as ts } from 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'
-import { TypeScriptWorker } from 'monaco-editor/esm/vs/language/typescript/tsWorker.js'
+import { resolveRuntimePath } from '../../../../shared/cross-platform-path'
+import type {
+  CompilerOptions,
+  LanguageService,
+  PreProcessedFileInfo,
+  ResolvedModuleFull
+} from 'typescript-api'
 import {
-  isCaseInsensitiveRuntimeRoot,
-  resolveRuntimePath
-} from '../../../../shared/cross-platform-path'
-import type { CompilerOptions, IScriptSnapshot, ScriptKind, LanguageService } from 'typescript-api'
-import {
-  isInsideProject,
   normalizeProjectPath,
   type TypeScriptProjectQuery,
   type TypeScriptProjectResult
@@ -15,65 +17,17 @@ import {
 
 const SOURCE_FILE = /\.(?:[cm]?[jt]sx?)$/i
 
-function createProjectService(
-  files: ProjectFiles,
-  roots: string[],
-  options: CompilerOptions
-): LanguageService {
-  class ProjectLanguageService extends TypeScriptWorker {
-    constructor() {
-      super(
-        { getMirrorModels: () => [] },
-        {
-          compilerOptions: options,
-          extraLibs: {},
-          inlayHintsOptions: {}
-        }
-      )
-    }
-
-    getCurrentDirectory(): string {
-      return files.root
-    }
-    useCaseSensitiveFileNames(): boolean {
-      return !isCaseInsensitiveRuntimeRoot(files.root)
-    }
-    getScriptFileNames(): string[] {
-      return roots
-    }
-    getScriptVersion(): string {
-      return '1'
-    }
-    readFile(name: string): string | undefined {
-      return super.readFile(name) ?? files.readFile(name)
-    }
-    fileExists(name: string): boolean {
-      return super.readFile(name) !== undefined || files.fileExists(name)
-    }
-    getScriptSnapshot(name: string): IScriptSnapshot | undefined {
-      const content = this.readFile(name)
-      return content === undefined ? undefined : ts.ScriptSnapshot.fromString(content)
-    }
-    getScriptKind(name: string): ScriptKind {
-      if (/\.tsx$/i.test(name)) {
-        return ts.ScriptKind.TSX
-      }
-      if (/\.jsx$/i.test(name)) {
-        return ts.ScriptKind.JSX
-      }
-      if (/\.json$/i.test(name)) {
-        return ts.ScriptKind.JSON
-      }
-      return /\.[cm]?js$/i.test(name) ? ts.ScriptKind.JS : ts.ScriptKind.TS
-    }
-  }
-  return new ProjectLanguageService().getLanguageService()
+type ProjectServiceCache = {
+  request?: TypeScriptProjectQuery
+  service?: LanguageService
+  inventory?: ProjectFiles
+  imports: Map<string, { content: string; info: PreProcessedFileInfo }>
+  resolutions: Map<string, ResolvedModuleFull | undefined>
+  optionsKey?: string
 }
 
-type ProjectServiceCache = { request?: TypeScriptProjectQuery; service?: LanguageService }
-
 export function createTypeScriptProjectQuery(): typeof queryTypeScriptProject {
-  const cache: ProjectServiceCache = {}
+  const cache: ProjectServiceCache = { imports: new Map(), resolutions: new Map() }
   return (request) => queryTypeScriptProject(request, cache)
 }
 
@@ -82,6 +36,8 @@ function isSameProject(a: TypeScriptProjectQuery, b: TypeScriptProjectQuery): bo
     a.rootPath === b.rootPath &&
     a.filePath === b.filePath &&
     a.kind === b.kind &&
+    JSON.stringify(a.referenceFileNames) === JSON.stringify(b.referenceFileNames) &&
+    JSON.stringify(a.referenceNames) === JSON.stringify(b.referenceNames) &&
     a.fileNames.length === b.fileNames.length &&
     a.fileNames.every((name, index) => name === b.fileNames[index]) &&
     Object.keys(a.files).length === Object.keys(b.files).length &&
@@ -101,21 +57,66 @@ export function queryTypeScriptProject(
     cache.service = undefined
     cache.request = undefined
   }
-  const files = new ProjectFiles(request)
+  const files = new ProjectFiles(request, cache?.inventory)
+  if (cache) {
+    if (
+      cache.inventory &&
+      (cache.inventory.root !== files.root ||
+        Object.entries(cache.inventory.request.files).some(
+          ([name, content]) => request.files[name] !== content
+        ))
+    ) {
+      cache.resolutions.clear()
+      cache.imports.clear()
+    }
+    cache.inventory = files
+  }
   const project = files.project()
-  if (files.missing.size > 0) {
-    return { missingFiles: [...files.missing], locations: [] }
+  if (files.missing.size > 0 || files.missingPaths.size > 0) {
+    return {
+      missingFiles: [...files.missing],
+      missingPaths: [...files.missingPaths],
+      referenceNames: [],
+      locations: []
+    }
   }
   const filePath = normalizeProjectPath(request.filePath)
+  const source = files.readFile(filePath) ?? ''
+  const ambientScript =
+    project &&
+    project.options.moduleDetection !== ts.ModuleDetectionKind.Force &&
+    !/\.[cm][jt]s$/i.test(filePath) &&
+    !ts.isExternalModule(ts.createSourceFile(filePath, source, ts.ScriptTarget.ESNext))
+  const candidatePaths =
+    request.referenceFileNames && !ambientScript
+      ? new Set(request.referenceFileNames.map(normalizeProjectPath))
+      : undefined
   const roots =
     request.kind === 'definition'
       ? [filePath]
       : [
           ...new Set([
-            ...(project?.fileNames ??
+            ...(
+              project?.fileNames ??
               files.names.filter(
                 (name) => SOURCE_FILE.test(name) && !name.includes('/node_modules/')
-              )),
+              )
+            ).filter((name) => {
+              if (!candidatePaths) {
+                return true
+              }
+              if (/\.d\.[cm]?ts$/i.test(name)) {
+                return true
+              }
+              if (!candidatePaths.has(normalizeProjectPath(name))) {
+                return false
+              }
+              const content = files.readFile(name)
+              return (
+                content === undefined ||
+                containsReferenceName(content, request.referenceNames ?? [])
+              )
+            }),
             filePath
           ])
         ]
@@ -128,10 +129,25 @@ export function queryTypeScriptProject(
     ...(!project ? { moduleDetection: ts.ModuleDetectionKind.Force } : {}),
     ...project?.options
   }
+  if (cache && cache.optionsKey !== JSON.stringify(options)) {
+    cache.resolutions.clear()
+    cache.optionsKey = JSON.stringify(options)
+  }
   // Discover unloaded imports before paying to build and type-check a program.
   const visited = new Set<string>()
   const pending = [...roots]
-  const knownNames = new Set(files.names)
+  for (const type of options.types ?? []) {
+    const resolved = ts.resolveTypeReferenceDirective(
+      type,
+      filePath,
+      options,
+      files
+    ).resolvedTypeReferenceDirective
+    if (resolved?.resolvedFileName) {
+      pending.push(resolved.resolvedFileName)
+    }
+  }
+  const resolutions = new Map<string, ResolvedModuleFull | undefined>()
   while (pending.length > 0) {
     const name = pending.pop()!
     if (visited.has(name)) {
@@ -142,10 +158,34 @@ export function queryTypeScriptProject(
     if (content === undefined) {
       continue
     }
-    const info = ts.preProcessFile(content, true, true)
+    const previous = cache?.imports.get(name)
+    const info =
+      previous?.content === content ? previous.info : ts.preProcessFile(content, true, true)
+    cache?.imports.set(name, { content, info })
+    const directory = resolveRuntimePath(name, '..')
     for (const imported of info.importedFiles) {
-      const resolved = ts.resolveModuleName(imported.fileName, name, options, files).resolvedModule
-      if (resolved) {
+      const key = `${directory}\0${imported.fileName}`
+      const unresolved = files.unresolvedAccesses
+      let resolved = cache?.resolutions.get(key)
+      if (!cache?.resolutions.has(key)) {
+        if (resolutions.has(key)) {
+          resolved = resolutions.get(key)
+        } else {
+          resolved = ts.resolveModuleName(imported.fileName, name, options, files).resolvedModule
+          resolutions.set(key, resolved)
+          if (files.unresolvedAccesses === unresolved) {
+            cache?.resolutions.set(key, resolved)
+          }
+        }
+      }
+      if (
+        resolved &&
+        !(
+          resolved.isExternalLibraryImport &&
+          /\.[cm]?jsx?$/i.test(resolved.resolvedFileName) &&
+          (options.maxNodeModuleJsDepth ?? 0) === 0
+        )
+      ) {
         pending.push(resolved.resolvedFileName)
       }
     }
@@ -154,15 +194,32 @@ export function queryTypeScriptProject(
         normalizeProjectPath(resolveRuntimePath(resolveRuntimePath(name, '..'), reference.fileName))
       )
     }
+    for (const reference of info.typeReferenceDirectives) {
+      const resolved = ts.resolveTypeReferenceDirective(
+        reference.fileName,
+        name,
+        options,
+        files
+      ).resolvedTypeReferenceDirective
+      if (resolved?.resolvedFileName) {
+        pending.push(resolved.resolvedFileName)
+      }
+    }
   }
-  if ([...files.missing].some((name) => knownNames.has(name))) {
-    return { missingFiles: [...files.missing], locations: [] }
+  if (request.kind === 'references' && (files.missing.size > 0 || files.missingPaths.size > 0)) {
+    return {
+      missingFiles: [...files.missing],
+      missingPaths: [...files.missingPaths],
+      referenceNames: [],
+      locations: []
+    }
   }
   const service = createProjectService(files, roots, options)
   try {
     const result = queryProjectLocations(request, service, files.root, [])
     result.missingFiles = [...files.missing]
-    if (cache && files.missing.size === 0) {
+    result.missingPaths = [...files.missingPaths]
+    if (cache && files.missing.size === 0 && files.missingPaths.size === 0) {
       cache.service = service
       cache.request = request
     }
@@ -174,42 +231,21 @@ export function queryTypeScriptProject(
   }
 }
 
-function queryProjectLocations(
-  request: TypeScriptProjectQuery,
-  service: LanguageService,
-  root: string,
-  missingFiles: string[]
-): TypeScriptProjectResult {
-  const filePath = normalizeProjectPath(request.filePath)
-  const entries =
-    request.kind === 'definition'
-      ? (service.getDefinitionAtPosition(filePath, request.offset) ?? []).filter(
-          (entry) => entry.kind !== ts.ScriptElementKind.alias
-        )
-      : (service.findReferences(filePath, request.offset) ?? []).flatMap((group) =>
-          group.references.filter((entry) => request.includeDeclaration || !entry.isDefinition)
-        )
-  const program = service.getProgram()
-  const locations: TypeScriptProjectResult['locations'] = []
-  for (const entry of entries) {
-    if (!isInsideProject(root, normalizeProjectPath(entry.fileName))) {
-      continue
-    }
-    const source = program?.getSourceFile(entry.fileName)
-    if (!source) {
-      continue
-    }
-    const start = source.getLineAndCharacterOfPosition(entry.textSpan.start)
-    const end = source.getLineAndCharacterOfPosition(entry.textSpan.start + entry.textSpan.length)
-    locations.push({
-      filePath: entry.fileName,
-      range: {
-        startLineNumber: start.line + 1,
-        startColumn: start.character + 1,
-        endLineNumber: end.line + 1,
-        endColumn: end.character + 1
-      }
-    })
+function containsReferenceName(content: string, names: string[]): boolean {
+  if (names.some((name) => content.includes(name))) {
+    return true
   }
-  return { missingFiles, locations }
+  const candidates = new Set(names)
+  const scanner = ts.createScanner(
+    ts.ScriptTarget.ESNext,
+    true,
+    ts.LanguageVariant.Standard,
+    content
+  )
+  while (scanner.scan() !== ts.SyntaxKind.EndOfFileToken) {
+    if (candidates.has(scanner.getTokenValue())) {
+      return true
+    }
+  }
+  return false
 }

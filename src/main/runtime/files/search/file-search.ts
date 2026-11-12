@@ -20,6 +20,17 @@ import {
 } from '../file-target'
 import { basenameFromRelativePath } from '../file-paths'
 import { RuntimeMobileFilePathSearchCache } from './mobile-path-search'
+import type {
+  TypeScriptNavigationRequest,
+  TypeScriptNavigationResult
+} from '../../../../shared/editor-language/typescript-navigation'
+import { isPathInsideOrEqual } from '../../../../shared/cross-platform-path'
+import { resolveRuntimeAuthorizedPath } from '../chat-scratch-file-root'
+import {
+  authorizeTypeScriptNavigation,
+  restoreTypeScriptNavigationPaths
+} from '../../../typescript-navigation/typescript-navigation-paths'
+import { queryTypeScriptOnHost } from '../../../typescript-navigation/typescript-server-pool'
 
 const MOBILE_FILE_LIST_LIMIT = 5000
 
@@ -46,6 +57,26 @@ export class RuntimeFileSearch {
   )
 
   constructor(private readonly host: RuntimeFileSearchHost) {}
+
+  async queryTypeScriptNavigation(
+    worktree: string,
+    request: TypeScriptNavigationRequest,
+    clientId?: string,
+    signal?: AbortSignal
+  ): Promise<TypeScriptNavigationResult> {
+    const target = await this.host.resolveRuntimeFileTarget(worktree)
+    if (runtimeFileRouteForTarget(target).kind === 'ssh') {
+      return { available: false, locations: [] }
+    }
+    if (!isPathInsideOrEqual(target.worktree.path, request.rootPath)) {
+      return { available: false, locations: [] }
+    }
+    const authorized = await authorizeTypeScriptNavigation(request, (path) =>
+      resolveRuntimeAuthorizedPath(path, this.host.requireStore())
+    )
+    const result = await queryTypeScriptOnHost(`rpc:${clientId ?? 'local'}`, authorized, signal)
+    return restoreTypeScriptNavigationPaths(result, authorized.rootPath, request.rootPath)
+  }
 
   async listMobileFiles(
     worktreeSelector: string,

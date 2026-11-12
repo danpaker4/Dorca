@@ -14,6 +14,7 @@ import {
   WorktreeSelector
 } from '../../../../../shared/rpc-contract/files-target-params'
 import { FILE_TERMINAL_ARTIFACT_METHODS } from './files-terminal-artifact-methods'
+import { FILE_TYPESCRIPT_NAVIGATION_METHODS } from './files-typescript-navigation-methods'
 import {
   ChatImageRead,
   FilePathsExist,
@@ -36,6 +37,7 @@ import { limitSearchResultToContentBudget } from '../../../../../shared/file-sea
 let filesWatchSubscriptionSeq = 0
 
 export const FILE_METHODS = [
+  ...FILE_TYPESCRIPT_NAVIGATION_METHODS,
   defineMethod({
     name: 'files.list',
     permission: 'workspace',

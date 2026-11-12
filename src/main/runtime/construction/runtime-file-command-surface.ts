@@ -14,6 +14,7 @@ export type RuntimeFileCommandSurface = Pick<
   | 'searchQuickOpenFilePaths'
   | 'searchRuntimeFiles'
   | 'listRuntimeFiles'
+  | 'queryTypeScriptNavigation'
 > &
   Pick<
     RuntimeFileAccess,
@@ -109,6 +110,7 @@ export function installRuntimeFileCommandSurface(
     copyFileExplorerPath: fileMutations.copyFileExplorerPath.bind(fileMutations),
     deleteFileExplorerPath: fileMutations.deleteFileExplorerPath.bind(fileMutations),
     searchRuntimeFiles: fileSearch.searchRuntimeFiles.bind(fileSearch),
+    queryTypeScriptNavigation: fileSearch.queryTypeScriptNavigation.bind(fileSearch),
     listRuntimeFiles: fileSearch.listRuntimeFiles.bind(fileSearch),
     listRuntimeMarkdownDocuments: fileAccess.listRuntimeMarkdownDocuments.bind(fileAccess),
     pathsExistRuntimeFiles: fileAccess.pathsExistRuntimeFiles.bind(fileAccess),

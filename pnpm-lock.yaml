@@ -689,6 +689,9 @@ importers:
       vitest:
         specifier: 5.0.5
         version: 5.0.5(patch_hash=166c034c864f98267e7d479f083b8d37ea9a7b08d6662313dd38e7c69c9a3eb4)(@opentelemetry/api@1.9.1)(@types/node@24.19.2)(happy-dom@21.0.4)(msw@2.14.3(@types/node@24.19.2)(typescript@7.0.2))(vite@8.3.5(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+      vscode-jsonrpc:
+        specifier: 9.0.0
+        version: 9.0.0
       vscode-oniguruma:
         specifier: ^2.0.1
         version: 2.0.1
@@ -8275,6 +8278,10 @@ packages:
       jsdom:
         optional: true
 
+  vscode-jsonrpc@9.0.0:
+    resolution: {integrity: sha512-+VvMmQPJhtvJ+8O+zu2JKIRiLxXF8NW7krWgyMGeOHrp4Cn23T5hc0v2LknNeopDOB70wghHAds7mKtcZ0I4Sg==}
+    engines: {node: '>=14.0.0'}
+
   vscode-oniguruma@2.0.1:
     resolution: {integrity: sha512-poJU8iHIWnC3vgphJnrLZyI3YdqRlR27xzqDmpPXYzA93R4Gk8z7T6oqDzDoHjoikA2aS82crdXFkjELCdJsjQ==}
 
@@ -15805,6 +15812,8 @@ snapshots:
       - '@types/msw'
       - '@types/picomatch'
       - msw
+
+  vscode-jsonrpc@9.0.0: {}
 
   vscode-oniguruma@2.0.1: {}
 

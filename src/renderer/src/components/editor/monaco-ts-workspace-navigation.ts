@@ -1,8 +1,6 @@
 import type * as Monaco from 'monaco-editor'
 import { useAppStore } from '@/store'
 import { listRuntimeFiles } from '@/runtime/files/search/runtime-file-search-client'
-import { readRuntimeFileContent } from '@/runtime/files/reads/runtime-file-read-client'
-import { computeRelativePath } from './monaco-ts-workspace-imports'
 import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
 import {
   resolveModelContext,
@@ -12,10 +10,14 @@ import {
 } from './monaco-ts-workspace-models'
 import { isInsideProject, normalizeProjectPath } from './monaco-ts-project-protocol'
 import { acquireNavigationSession, releaseNavigationSession } from './monaco-ts-navigation-session'
+import { loadProjectSnapshots } from './monaco-ts-project-snapshots'
+import { ReferenceCandidates } from './monaco-ts-reference-candidates'
+import { queryHostTypeScriptNavigation } from './monaco-ts-host-navigation'
+import type { TypeScriptNavigationLocation } from '../../../../shared/editor-language/typescript-navigation'
+import type { ModelWorkspaceContext } from './monaco-ts-workspace-models'
 
 const MAX_INVENTORY_FILES = 100_000
-const MAX_READ_FILES = 20_000
-const MAX_SOURCE_BYTES = 64 * 1024 * 1024
+const MAX_SOURCE_BYTES = 128 * 1024 * 1024
 
 export async function queryWorkspaceSymbol(
   monaco: Pick<typeof Monaco, 'editor' | 'Uri'>,
@@ -31,6 +33,8 @@ export async function queryWorkspaceSymbol(
   }
   const version = model.getVersionId()
   const buffers = new Map<Monaco.editor.ITextModel, number>([[model, version]])
+  const bufferFilePaths = new Map<Monaco.editor.ITextModel, string>([[model, ctx.filePath]])
+  const bufferPaths = new Set([normalizeProjectPath(ctx.filePath)])
   const cancelled = (): boolean =>
     token.isCancellationRequested ||
     session.revision !== revision ||
@@ -40,30 +44,7 @@ export async function queryWorkspaceSymbol(
   const revision = session.revision
   try {
     ctx.assertAuthorityCurrent()
-    const inventory =
-      session.inventory ??
-      (await listRuntimeFiles(ctx.readContext, {
-        rootPath: root,
-        includeIgnored: false,
-        allowLegacyIncludeIgnored: true,
-        maxResults: MAX_INVENTORY_FILES + 1
-      }))
-    ctx.assertAuthorityCurrent()
-    if (cancelled() || inventory.length > MAX_INVENTORY_FILES) {
-      return []
-    }
-    if (session.watching && session.revision === revision) {
-      session.inventory = inventory
-    }
-    const fileNames = inventory
-      .map((name) =>
-        normalizeProjectPath(
-          /^(?:\/|[a-z]:[\\/])/i.test(name)
-            ? name
-            : `${ctx.readContext.target.kind === 'environment' ? ctx.worktreePath : root}/${name}`
-        )
-      )
-      .filter((name) => isInsideProject(root, name))
+    const bufferNames: string[] = []
     const files: Record<string, string | null> = { ...session.files }
     const state = useAppStore.getState()
     const paths = new Set(
@@ -104,17 +85,76 @@ export async function queryWorkspaceSymbol(
       )
       if (buffer) {
         buffers.set(buffer, buffer.getVersionId())
+        bufferFilePaths.set(buffer, filePath)
+        bufferPaths.add(path)
         files[path] = buffer.getValue()
-        fileNames.push(path)
+        bufferNames.push(path)
       }
     }
     files[normalizeProjectPath(ctx.filePath)] = model.getValue()
+    const native = await queryHostTypeScriptNavigation(ctx, {
+      rootPath: ctx.projectRootPath ?? ctx.worktreePath,
+      filePath: ctx.filePath,
+      kind,
+      lineNumber: position.lineNumber,
+      column: position.column,
+      includeDeclaration,
+      buffers: [...bufferFilePaths].map(([buffer, filePath]) => ({
+        filePath,
+        content: buffer.getValue(),
+        languageId: buffer.getLanguageId()
+      }))
+    })
+    if (cancelled()) {
+      return []
+    }
+    if (native) {
+      return await materializeNavigationLocations(monaco, ctx, native.locations, files, cancelled)
+    }
+    const inventory =
+      session.inventory ??
+      (await listRuntimeFiles(ctx.readContext, {
+        rootPath: root,
+        includeIgnored: false,
+        allowLegacyIncludeIgnored: true,
+        maxResults: MAX_INVENTORY_FILES + 1
+      }))
+    ctx.assertAuthorityCurrent()
+    if (cancelled() || inventory.length > MAX_INVENTORY_FILES) {
+      return []
+    }
+    if (session.watching && session.revision === revision) {
+      session.inventory = inventory
+    }
+    const fileNames = [
+      ...inventory
+        .map((name) =>
+          normalizeProjectPath(
+            /^(?:\/|[a-z]:[\\/])/i.test(name)
+              ? name
+              : `${ctx.readContext.target.kind === 'environment' ? ctx.worktreePath : root}/${name}`
+          )
+        )
+        .filter((name) => isInsideProject(root, name)),
+      ...bufferNames,
+      ...session.existingPaths
+    ]
+    const candidates =
+      kind === 'references'
+        ? new ReferenceCandidates(
+            ctx.readContext,
+            root,
+            [...bufferPaths],
+            session.referenceSearches
+          )
+        : undefined
+    await candidates?.expand([model.getWordAtPosition(position)?.word ?? ''])
     const proxy = await session.worker.getProxy()
-    let bytes = Object.values(files).reduce(
-      (total, content) => total + (content?.length ?? 0) * 2,
-      0
-    )
-    if (bytes > MAX_SOURCE_BYTES) {
+    const knownNames = new Set(fileNames)
+    if (
+      Object.values(files).reduce((sum, content) => sum + (content?.length ?? 0) * 2, 0) >
+      MAX_SOURCE_BYTES
+    ) {
       return []
     }
     while (true) {
@@ -129,7 +169,8 @@ export async function queryWorkspaceSymbol(
         kind,
         includeDeclaration,
         fileNames,
-        files
+        files,
+        ...candidates?.request
       })
       if (cancelled()) {
         return []
@@ -138,61 +179,47 @@ export async function queryWorkspaceSymbol(
       const missing = result.missingFiles.filter(
         (name) => isInsideProject(root, normalizeProjectPath(name)) && !(name in files)
       )
-      if (missing.length === 0 || (kind === 'definition' && result.locations.length > 0)) {
-        await Promise.all(
-          [...new Set(result.locations.map((entry) => entry.filePath))].map((filePath) =>
-            ensureCandidateFileModel(
-              monaco,
-              ctx,
-              filePath,
-              files[normalizeProjectPath(filePath)] ?? undefined
-            )
-          )
-        )
-        if (cancelled()) {
-          return []
+      const missingPaths = result.missingPaths.filter(
+        (name) =>
+          isInsideProject(root, normalizeProjectPath(name)) &&
+          !(name in files) &&
+          !knownNames.has(name)
+      )
+      if (
+        (missing.length === 0 && missingPaths.length === 0) ||
+        (kind === 'definition' && result.locations.length > 0)
+      ) {
+        if (await candidates?.expand(result.referenceNames)) {
+          continue
         }
-        return result.locations.map(({ filePath, range }) => ({
-          uri: monaco.Uri.parse(registerTargetUriContext(ctx, filePath)),
-          range
-        }))
+        return await materializeNavigationLocations(monaco, ctx, result.locations, files, cancelled)
       }
-      if (Object.keys(files).length + missing.length > MAX_READ_FILES) {
+      const loaded = await loadProjectSnapshots({
+        context: ctx.readContext,
+        files,
+        paths: missing,
+        existencePaths: missingPaths,
+        knownNames,
+        maxSourceBytes: MAX_SOURCE_BYTES,
+        isCurrent: () => {
+          ctx.assertAuthorityCurrent()
+          return !cancelled()
+        },
+        onSnapshot: (filePath, content) => {
+          if (session.watching && session.revision === revision) {
+            session.files[filePath] = content
+          }
+        },
+        onExistingPath: (filePath) => {
+          knownNames.add(filePath)
+          fileNames.push(filePath)
+          if (session.watching && session.revision === revision) {
+            session.existingPaths.add(filePath)
+          }
+        }
+      })
+      if (!loaded) {
         return []
-      }
-      for (let start = 0; start < missing.length; start += 16) {
-        if (cancelled()) {
-          return []
-        }
-        await Promise.all(
-          missing.slice(start, start + 16).map(async (filePath) => {
-            try {
-              ctx.assertAuthorityCurrent()
-              const result = await readRuntimeFileContent({
-                ...ctx.readContext,
-                worktreeId: ctx.worktreeId,
-                filePath,
-                relativePath: computeRelativePath(ctx.worktreePath, filePath)
-              })
-              ctx.assertAuthorityCurrent()
-              const content =
-                !result.isBinary && typeof result.content === 'string' ? result.content : null
-              files[filePath] = content
-              if (session.watching && session.revision === revision) {
-                session.files[filePath] = content
-              }
-              bytes += (content?.length ?? 0) * 2
-            } catch {
-              files[filePath] = null
-              if (session.watching && session.revision === revision) {
-                session.files[filePath] = null
-              }
-            }
-          })
-        )
-        if (bytes > MAX_SOURCE_BYTES) {
-          return []
-        }
       }
     }
   } catch {
@@ -200,4 +227,32 @@ export async function queryWorkspaceSymbol(
   } finally {
     releaseNavigationSession(session)
   }
+}
+
+async function materializeNavigationLocations(
+  monaco: Pick<typeof Monaco, 'editor' | 'Uri'>,
+  ctx: ModelWorkspaceContext,
+  locations: TypeScriptNavigationLocation[],
+  files: Record<string, string | null>,
+  cancelled: () => boolean
+): Promise<Monaco.languages.Location[]> {
+  ctx.assertAuthorityCurrent()
+  await Promise.all(
+    [...new Set(locations.map((entry) => entry.filePath))].map((filePath) =>
+      ensureCandidateFileModel(
+        monaco,
+        ctx,
+        filePath,
+        files[normalizeProjectPath(filePath)] ?? undefined
+      )
+    )
+  )
+  ctx.assertAuthorityCurrent()
+  if (cancelled()) {
+    return []
+  }
+  return locations.map(({ filePath, range }) => ({
+    uri: monaco.Uri.parse(registerTargetUriContext(ctx, filePath)),
+    range
+  }))
 }

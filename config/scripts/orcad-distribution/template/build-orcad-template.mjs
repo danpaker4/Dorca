@@ -45,7 +45,7 @@ const outputDir = join(root, 'out', 'orcad-template')
 const buildDir = join(root, 'out', '.orcad-template-build')
 
 function isExecutable(filename) {
-  return /(?:^|\/)(?:rg|spawn-helper)$/.test(filename)
+  return /(?:^|\/)(?:rg|spawn-helper|tsc)$/.test(filename)
 }
 
 function copy(source, destination, executable = false) {
