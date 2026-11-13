@@ -79,7 +79,10 @@ jobs:
           native-runtime: node
       - uses: ./.github/actions/install-mobile-dependencies
       - name: Check the Mac release configuration
-        run: pnpm exec vitest run --config config/vitest.config.ts --maxWorkers=2 config/scripts/dorca-mac-assets.test.mjs
+        run: >-
+          pnpm exec vitest run --config config/vitest.config.ts --maxWorkers=2
+          config/scripts/dorca-mac-assets.test.mjs
+          src/renderer/src/lib/editor/monaco/typescript-highlight-worker.test.ts
       - name: Build Dorca and its Mac native components
         run: pnpm run build:release
       - name: Package the Mac installer without Apple credentials

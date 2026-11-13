@@ -7,43 +7,19 @@ import {
   type GitInlineHunkAction,
   type GitInlineSnapshot
 } from '../../../shared/git/diff/git-inline-hunks'
-import {
-  resolveGitMetadataPath,
-  resolveWorktreeHostPath
-} from '../../../shared/git/metadata/git-metadata-path'
+import { resolveWorktreeHostPath } from '../../../shared/git/metadata/git-metadata-path'
 import { parseWslUncPath, toLinuxPath } from '../../../shared/wsl-paths'
 import { isBinaryBuffer } from '../../../shared/file-preview/binary-buffer'
 import { gitOptionsForWorktree, type GitRuntimeOptions } from '../git-runtime-options'
-import { gitExecFileAsync, gitOptionalLocksDisabledEnv } from '../runner'
+import { gitExecFileAsync } from '../command-runner/git-exec-file'
+import { gitOptionalLocksDisabledEnv } from '../command-runner/git-environment/git-process-env'
 import { checkIgnoredPaths } from './check-ignored-paths'
 import { literalPathspec } from './git-pathspec'
 import { invalidateGitReadCaches } from './git-read-cache-invalidation'
-async function inlineIndexPath(worktreePath: string, options: GitRuntimeOptions): Promise<string> {
-  const { stdout } = await gitExecFileAsync(
-    ['rev-parse', '--git-path', 'index'],
-    gitOptionsForWorktree(worktreePath, options)
-  )
-  const hostPath = resolveWorktreeHostPath(worktreePath, options)
-  const indexPath = hostPath && resolveGitMetadataPath(hostPath, stdout, options)
-  if (!indexPath) {
-    throw new Error('Cannot resolve this repository index on its owning host.')
-  }
-  return indexPath
-}
+import { inlineIndexPath, readIndex } from './inline-hunk-index'
 
 const MAX_INLINE_BYTES = 1024 * 1024
 const stale = (): Error => new Error('This change is stale. Refresh the inline diff and try again.')
-
-async function readIndex(indexPath: string): Promise<Buffer | null> {
-  try {
-    return await readFile(indexPath)
-  } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
-      return null
-    }
-    throw error
-  }
-}
 
 async function loadInlineSnapshot(
   worktreePath: string,

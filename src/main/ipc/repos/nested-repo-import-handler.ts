@@ -8,7 +8,7 @@ import type { RepositoryMetadataOwner } from '../../workspaces/catalog/imported-
 import type { ProjectGroupImportResult } from '../../../shared/project-group-types'
 import { DEFAULT_REPO_BADGE_COLOR } from '../../../shared/constants'
 import { normalizeRuntimePathForComparison } from '../../../shared/cross-platform-path'
-import { awaitWindowsHostGitEnvironmentReady } from '../../git/runner'
+import { awaitWindowsHostGitEnvironmentReady } from '../../git/command-runner/host-routing/windows-host-git-environment'
 import { isGitRepoAsync, getRepoName } from '../../git/repo'
 import {
   createNestedProjectGroupResolver,
@@ -64,6 +64,7 @@ export function registerNestedRepoImportHandler(
         (repoPath) => ({
           path: repoPath,
           status: 'failed',
+          errorCode: 'not_in_scan',
           error: 'Repository was not found in the nested repo scan result'
         })
       )
@@ -75,7 +76,12 @@ export function registerNestedRepoImportHandler(
         try {
           // This process cannot validate SSH paths with local Git.
           if (args.connectionId) {
-            results.push({ path: repoPath, status: 'failed', error: 'Not a valid git repository' })
+            results.push({
+              path: repoPath,
+              status: 'failed',
+              errorCode: 'not_git_repository',
+              error: 'Not a valid git repository'
+            })
             continue
           }
           await awaitWindowsHostGitEnvironmentReady({ cwd: repoPath })
@@ -83,6 +89,7 @@ export function registerNestedRepoImportHandler(
             results.push({
               path: repoPath,
               status: 'failed',
+              errorCode: 'not_git_repository',
               error: 'Not a valid git repository'
             })
             continue
@@ -155,6 +162,7 @@ export function registerNestedRepoImportHandler(
           results.push({
             path: repoPath,
             status: 'failed',
+            errorCode: 'import_failed',
             error: sanitizeNestedRepoImportError('Failed to import nested repository', error)
           })
         }

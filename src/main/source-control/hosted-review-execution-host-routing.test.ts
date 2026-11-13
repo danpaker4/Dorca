@@ -60,14 +60,20 @@ vi.mock('../github/gh-utils', () => ({
   release: vi.fn()
 }))
 
-vi.mock('../gitlab/gl-utils', () => ({
+vi.mock('../gitlab/requests/glab-request-admission', () => ({
   acquire: vi.fn(async () => {}),
-  release: vi.fn(),
-  glabExecFileAsync: glabExecFileAsyncMock,
+  release: vi.fn()
+}))
+
+vi.mock('../git/command-runner/hosted-cli/glab-exec-file', () => ({
+  glabExecFileAsync: glabExecFileAsyncMock
+}))
+
+vi.mock('../gitlab/projects/gitlab-project-ref-resolution', () => ({
   glabRepoExecOptions: vi.fn(() => ({}))
 }))
 
-vi.mock('../git/command-runner/git-process-env', async (importOriginal) => ({
+vi.mock('../git/command-runner/git-environment/git-process-env', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   gitOptionalLocksDisabledEnv: vi.fn(() => ({}))
 }))
@@ -94,13 +100,13 @@ vi.mock('../git/remotes/remote-url-probe', () => ({
   withSharedRemoteUrlReads: <T>(work: () => Promise<T>) => work()
 }))
 
-vi.mock('../gitlab/client', () => ({
+vi.mock('../gitlab/merge-requests/merge-request-lookup', () => ({
   getProjectSlug: getProjectSlugMock,
   getMergeRequest: vi.fn(async () => null),
   getMergeRequestForBranchOrThrow: getMergeRequestForBranchOrThrowMock
 }))
 
-vi.mock('../gitlab/merge-request-creation', () => ({
+vi.mock('../gitlab/merge-requests/merge-request-creation', () => ({
   createGitLabMergeRequest: createGitLabMergeRequestMock
 }))
 

@@ -90,6 +90,7 @@ jobs:
           src/renderer/src/components/editor/monaco-ts-project-service.test.ts
           src/renderer/src/components/editor/monaco-ts-workspace-navigation.test.ts
           src/renderer/src/components/editor/monaco-ts-workspace-reference-limits.test.ts
+          src/renderer/src/lib/editor/monaco/typescript-highlight-worker.test.ts
           src/main/updater/releases/updater-prerelease-feed.test.ts
           src/main/updater/releases/updater-prerelease-feed-readiness.test.ts
           src/main/updater/releases/updater-release-builds.test.ts

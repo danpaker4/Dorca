@@ -40,7 +40,10 @@ import {
   OrcadPeerDesktopsParamsSchema
 } from '../orcad-peer-desktops-contract'
 import { OrcadTerminalCensusParamsSchema } from '../orcad-terminal-census'
-import { CrewSubscribeParams } from '../orchestration/orchestration-crew'
+import {
+  CrewSubscribeParams,
+  WorkerApprovalsSubscribeParams
+} from '../orchestration/orchestration-crew'
 import { PeerRunCancelParams } from '../orchestration/remote-owned-wire'
 import { RegisterDeviceKeyParamsSchema } from '../remote-runtime/pairing/device-key-registration-contract'
 import { PairingCreateOfferParamsSchema } from '../remote-runtime/pairing/pairing-create-offer-contract'
@@ -87,6 +90,7 @@ import { ReadVisualParams } from './agent-session-visual-params'
 import {
   AiVaultDeleteSessionParams,
   AiVaultListSessionsParams,
+  AiVaultPrepareSessionHandoffParams,
   AiVaultPrepareSessionResumeParams,
   AiVaultSessionTitlesParams
 } from './ai-vault-params'
@@ -478,6 +482,7 @@ import {
   OrcadMigrationCatalogReferenceParams,
   OrcadMigrationCommitCatalogParams
 } from './orcad-migration-params'
+import { ApprovalAnswerParams } from './orchestration-approval-answer-params'
 import {
   FederationDispatchParams,
   FederationFleetSnapshotParams,
@@ -678,6 +683,7 @@ import {
 import { RenameParams } from './structured-agent-session-rename-params'
 import { SendRecordedParams } from './structured-agent-session-send-recorded-params'
 import { SubscribeParams } from './structured-agent-session-subscribe-params'
+import { TerminalInferCodexQuestionSkip } from './terminal-codex-question-params'
 import { TerminalDaemonRestartSeveredParams } from './terminal-daemon-params'
 import { TerminalLimitUpdateParams } from './terminal-limit-params'
 import { TerminalAdoptOrphans } from './terminal-orphan-params'
@@ -885,6 +891,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentTeams.tmuxCompat': AgentTeamsTmuxCompat,
   'aiVault.deleteSession': AiVaultDeleteSessionParams,
   'aiVault.listSessions': AiVaultListSessionsParams,
+  'aiVault.prepareSessionHandoff': AiVaultPrepareSessionHandoffParams,
   'aiVault.prepareSessionResume': AiVaultPrepareSessionResumeParams,
   'aiVault.resolveSessionTitles': AiVaultSessionTitlesParams,
   'aiVault.searchSessions': AiVaultSearchRequestSchema,
@@ -1352,6 +1359,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'orcad.migration.stageCatalog': OrcadMigrationCatalogParams,
   'orcad.migration.stageSnapshotChunk': OrcadMigrationSnapshotChunkRequestSchema,
   'orcad.terminalCensus': OrcadTerminalCensusParamsSchema,
+  'orchestration.approvalAnswer': ApprovalAnswerParams,
   'orchestration.ask': AskParams,
   'orchestration.callerShow': null,
   'orchestration.check': CheckParams,
@@ -1393,6 +1401,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'orchestration.taskCreate': TaskCreateParams,
   'orchestration.taskList': TaskListParams,
   'orchestration.workerAbandon': WorkerDispatchParams,
+  'orchestration.workerApprovalsSubscribe': WorkerApprovalsSubscribeParams,
   'orchestration.workerAutoClose': OrchestrationWorkerSubjectParams,
   'orchestration.workerChatTouch': OrchestrationWorkerSubjectParams,
   'orchestration.workerKeepOpen': OrchestrationWorkerKeepOpenParams,
@@ -1576,6 +1585,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'terminal.focus': TerminalFocus,
   'terminal.getAutoRestoreFit': TerminalGetAutoRestoreFitParams,
   'terminal.getDisplayMode': TerminalHandle,
+  'terminal.inferCodexQuestionSkip': TerminalInferCodexQuestionSkip,
   'terminal.inspectProcess': TerminalInspectProcess,
   'terminal.isRunningAgent': TerminalHandle,
   'terminal.list': TerminalListParams,

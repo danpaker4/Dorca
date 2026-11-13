@@ -2,10 +2,10 @@ import { parseGitRemoteVerboseOutput } from '../../shared/git/remotes/git-remote
 import { isDefaultGitHubHost } from '../../shared/github/repository-identity-key'
 import { isGitHubHostAuthenticated } from '../github/github-enterprise-repository'
 import { parseGitHubRemoteIdentity } from '../github/github-remote-identity-parsing'
-import { getGlabKnownHosts, getGlabPartialHosts } from '../gitlab/gitlab-known-host-probe'
-import { parseGitLabProjectRef } from '../gitlab/project-ref-parser'
+import { getGlabKnownHosts, getGlabPartialHosts } from '../gitlab/projects/gitlab-known-host-probe'
+import { parseGitLabProjectRef } from '../gitlab/projects/project-ref-parser'
 import { REMOTE_URL_PROBE_TIMEOUT_MS } from './remotes/remote-url-probe'
-import { gitExecFileAsync } from './runner'
+import { gitExecFileAsync } from './command-runner/git-exec-file'
 import type { RemoteRefLocalGitOptions } from './remotes/remote-ref-probe-cache'
 
 /** Call only after the requested provider found no usable source; unknown is never exclusion evidence. */
