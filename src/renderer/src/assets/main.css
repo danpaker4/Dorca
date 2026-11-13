@@ -96,6 +96,9 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-editor-surface: var(--editor-surface);
+  --color-editor-cursor: var(--editor-cursor);
+  --color-editor-selection: var(--editor-selection);
+  --color-editor-inactive-selection: var(--editor-inactive-selection);
   --color-floating-surface: var(--floating-surface);
   --color-dialog-surface: var(--dialog-surface);
   --color-agent-question: var(--agent-question);
@@ -219,6 +222,9 @@
   --orca-security-dialog-surface: rgba(255, 255, 255, 0.96);
   --background: #fff;
   --editor-surface: #ffffff;
+  --editor-cursor: var(--ring);
+  --editor-selection: color-mix(in srgb, var(--ring) 30%, transparent);
+  --editor-inactive-selection: color-mix(in srgb, var(--ring) 15%, transparent);
   --foreground: #0a0a0a;
   --chat-canvas-mix: 0%;
   --chat-foreground-mix: 82%;
@@ -341,6 +347,9 @@
   --orca-security-dialog-surface: rgba(23, 23, 23, 0.96);
   --background: #0a0a0a;
   --editor-surface: #1e1e1e;
+  --editor-cursor: var(--ring);
+  --editor-selection: color-mix(in srgb, var(--ring) 30%, transparent);
+  --editor-inactive-selection: color-mix(in srgb, var(--ring) 15%, transparent);
   --foreground: #f0f0f0;
   --chat-canvas-mix: 5%;
   --chat-foreground-mix: 78%;

@@ -8,7 +8,7 @@ import { resolveTypeScriptServerBinary } from './typescript-server-binary'
 import { watchFileExplorerInWatcherProcess } from '../runtime/files/watch/file-watcher-host'
 import { hasTypeScriptProjectConfig } from './typescript-project-config-presence'
 
-const IDLE_STOP_MS = 5 * 60_000
+const IDLE_STOP_MS = 15 * 60_000
 const MAX_SERVERS = 4
 type ServerEntry = {
   server: TypeScriptLanguageServer

@@ -53,6 +53,11 @@ file of at most 16 KiB, or 64 KiB for an icon theme.
 
 ### Code colors
 
+Themes may set `--editor-cursor`, `--editor-selection` and `--editor-inactive-selection`
+independently. Selection colors retain their supplied opacity, including fully opaque colors.
+Omitted colors keep the existing ring-derived cursor and 30%/15% selection opacity. The cursor
+must remain visible against the editor background; selections must keep foreground text readable.
+
 An app theme also colors the code editor: its background, text, line numbers, cursor and
 selection follow the theme's tokens. Users can also pick any app theme, of either base, as just
 their editor theme (Settings → Appearance → Light/Dark editor theme); the editor then takes its

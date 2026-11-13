@@ -19,6 +19,13 @@ const BUILT_IN_SYNTAX: Record<'light' | 'dark', readonly string[]> = {
 // [Monaco color, token, hue the token follows when omitted]. Why only when the theme painted one:
 // themes that set none keep Monaco's stock diff and link colors, exactly as before these tokens.
 const MONACO_OPT_IN_COLORS: readonly (readonly [string, string, string])[] = [
+  ['editorCursor.foreground', '--editor-cursor', '--editor-cursor'],
+  ['editor.selectionBackground', '--editor-selection', '--editor-selection'],
+  [
+    'editor.inactiveSelectionBackground',
+    '--editor-inactive-selection',
+    '--editor-inactive-selection'
+  ],
   ...(['inserted', 'removed'] as const).flatMap((kind) => {
     const hue = kind === 'inserted' ? '--diff-added' : '--diff-removed'
     return [

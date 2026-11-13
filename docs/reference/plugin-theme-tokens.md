@@ -8,6 +8,9 @@ Every key an app theme may set in `tokens` (see [plugin themes](plugin-themes.md
 | --- | --- | --- | --- |
 | `--background` | App canvas | yes |  |
 | `--editor-surface` | Code editor and notebook background | no | same as `--background` |
+| `--editor-cursor` | Code editor cursor, independent of app focus rings | no | same as `--ring` |
+| `--editor-selection` | Selected code text background; accepts opaque or translucent colors | no | `--ring` at 30% opacity |
+| `--editor-inactive-selection` | Code selection background while the editor is unfocused | no | `--ring` at 15% opacity |
 | `--foreground` | Body text | yes |  |
 | `--card` | Cards and panels | no | same as `--background` |
 | `--card-foreground` | Text on `--card` | no | same as `--foreground` |

@@ -20,6 +20,9 @@ const PLUGIN_APP_THEME_CSS_FALLBACKS: Record<
   string,
   PluginThemeCssFallbackRule | Record<'light' | 'dark', PluginThemeCssFallbackRule>
 > = {
+  '--editor-cursor': ['--ring'],
+  '--editor-selection': { tint: '--ring', percent: 30 },
+  '--editor-inactive-selection': { tint: '--ring', percent: 15 },
   '--tab-bar': ['--card'],
   // Why per base: a white light --card can't be lifted, so light recesses the inactive tabs.
   '--tab-active': { light: ['--tab-bar'], dark: { mixForeground: 6, into: '--tab-bar' } },

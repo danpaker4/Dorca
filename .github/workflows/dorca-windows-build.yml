@@ -54,6 +54,9 @@ jobs:
           config/scripts/native-build/windows/windows-rust-executable-cache.test.mjs
           src/renderer/src/components/editor/monaco-ts-workspace-navigation.test.ts
           src/renderer/src/lib/editor/monaco/typescript-highlight-worker.test.ts
+          src/shared/plugins/artifacts/plugin-theme-artifact.test.ts
+          src/renderer/src/app-shell/appearance/terminal-app-theme.test.ts
+          src/main/ipc/filesystem/watcher-process/parcel-watcher-process.test.ts
           src/main/git/source-control/inline-hunks-real-git.test.ts
           config/scripts/dorca-release.test.mjs
           config/scripts/dorca-upstream-integration.test.mjs

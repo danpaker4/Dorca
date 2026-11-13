@@ -30,7 +30,16 @@ export function subscribeViaRuntimeWatcherProcess(
   opts: WatcherProcessSubscribeOptions,
   hooks: WatcherProcessHooks = {}
 ): Promise<WatcherProcessSubscription> {
-  return runtimeWatcherProcessPool.subscribe(dir, callback, opts, hooks)
+  return runtimeWatcherProcessPool.subscribe(
+    dir,
+    callback,
+    {
+      ...opts,
+      // Skip Parcel's Watchman probe, which opens a console through native _popen.
+      ...(process.platform === 'win32' ? { backend: 'windows' as const } : {})
+    },
+    hooks
+  )
 }
 
 export function disposeWatcherProcess(): void {

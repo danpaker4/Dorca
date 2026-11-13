@@ -14,6 +14,9 @@ type PluginAppThemeToken = (typeof PLUGIN_APP_THEME_TOKENS)[number]
 const TOKEN_ROLES: Record<PluginAppThemeToken, string> = {
   '--background': 'App canvas',
   '--editor-surface': 'Code editor and notebook background',
+  '--editor-cursor': 'Code editor cursor, independent of app focus rings',
+  '--editor-selection': 'Selected code text background; accepts opaque or translucent colors',
+  '--editor-inactive-selection': 'Code selection background while the editor is unfocused',
   '--foreground': 'Body text',
   '--card': 'Cards and panels',
   '--card-foreground': 'Text on `--card`',

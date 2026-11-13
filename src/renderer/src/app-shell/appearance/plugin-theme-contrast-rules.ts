@@ -50,6 +50,11 @@ const CONTRAST_RULE_DEFINITIONS: readonly ContrastRule[] = [
   // Notebook markdown renders directly on the editor surface.
   textPair('--editor-surface', '--foreground'),
   textPair('--editor-surface', '--muted-foreground'),
+  ...['--editor-selection', '--editor-inactive-selection'].map((surface): ContrastRule => ({
+    ...textPair(surface, '--foreground'),
+    drop: [surface],
+    over: '--editor-surface'
+  })),
   textPair('--card', '--card-foreground'),
   textPair('--popover', '--popover-foreground'),
   textPair('--primary', '--primary-foreground'),
@@ -133,6 +138,7 @@ export const CONTRAST_RULES = CONTRAST_RULE_DEFINITIONS.map((rule) => ({
 }))
 // Why 2:1, not WCAG's 3:1: Orca's own light ring is 2.6:1; the goal is a ring that never vanishes.
 export const RINGS: readonly (readonly [string, string])[] = [
+  ['--editor-cursor', '--editor-surface'],
   ['--ring', '--background'],
   ['--sidebar-ring', '--sidebar'],
   ['--worktree-sidebar-ring', '--worktree-sidebar'],

@@ -12,6 +12,9 @@ import {
 export const PLUGIN_APP_THEME_TOKENS = [
   '--background',
   '--editor-surface',
+  '--editor-cursor',
+  '--editor-selection',
+  '--editor-inactive-selection',
   '--foreground',
   '--card',
   '--card-foreground',
