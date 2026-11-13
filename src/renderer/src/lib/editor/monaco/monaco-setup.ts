@@ -7,7 +7,7 @@ import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker'
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker'
 import cssWorker from 'monaco-editor/esm/vs/language/css/css.worker?worker'
 import htmlWorker from 'monaco-editor/esm/vs/language/html/html.worker?worker'
-import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker'
+import tsWorker from './monaco-typescript.worker?worker'
 import { registerAstroLanguage } from '../../monaco-languages/register-astro'
 import { registerCMakeLanguage } from '../../monaco-languages/register-cmake'
 import { registerCudaLanguage } from '../../monaco-languages/register-cuda'
@@ -33,6 +33,9 @@ import { installMonacoTypeScriptWorkspaceIntelligence } from '@/components/edito
 import { runMonacoSetupSteps } from './monaco-setup-steps'
 import { installMonacoTsWorkerIdleStop } from './monaco-ts-worker-idle-stop'
 import { onPluginFontLoadsChanged } from '@/store/plugins/appearance/plugin-fonts'
+import { installTypeScriptSemanticHighlighting } from './typescript-semantic-highlighting'
+
+let unregisterTypeScriptHighlighting: (() => void) | undefined
 
 globalThis.MonacoEnvironment = {
   getWorker(_workerId, label) {
@@ -76,6 +79,12 @@ monacoTS.javascriptDefaults.setCompilerOptions({
 })
 
 runMonacoSetupSteps([
+  [
+    'TypeScript semantic highlighting',
+    () => {
+      unregisterTypeScriptHighlighting = installTypeScriptSemanticHighlighting(monaco)
+    }
+  ],
   ['Vue language registration', () => registerVueLanguage(monaco)],
   ['Svelte language registration', () => registerSvelteLanguage(monaco)],
   ['Astro language registration', () => registerAstroLanguage(monaco)],
@@ -109,5 +118,6 @@ loader.config({ monaco })
 const unregisterEditorModelRegistry = editorModelRegistry.register(monaco)
 if (import.meta.hot) {
   import.meta.hot.dispose(unregisterEditorModelRegistry)
+  import.meta.hot.dispose(() => unregisterTypeScriptHighlighting?.())
 }
 export { monaco }

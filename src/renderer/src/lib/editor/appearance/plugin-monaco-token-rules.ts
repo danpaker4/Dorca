@@ -47,6 +47,7 @@ const MONACO_TOKEN_SCOPES: Record<string, string> = {
   identifier: 'variable',
   variable: 'variable',
   'variable.parameter': 'variable.parameter',
+  'variable.readonly': 'variable.other.constant',
   'variable.predefined': 'support.variable',
   predefined: 'support.function',
   function: 'entity.name.function',

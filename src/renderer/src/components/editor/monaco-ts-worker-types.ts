@@ -45,3 +45,10 @@ declare module 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.
     ) => string[]
   }
 }
+
+declare module 'monaco-editor/esm/vs/common/initialize.js' {
+  import type { TypeScriptWorker } from 'monaco-editor/esm/vs/language/typescript/tsWorker.js'
+  export function initialize(
+    create: (...args: ConstructorParameters<typeof TypeScriptWorker>) => TypeScriptWorker
+  ): void
+}
