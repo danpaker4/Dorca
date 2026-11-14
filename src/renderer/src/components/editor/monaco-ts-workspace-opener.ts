@@ -5,7 +5,10 @@ import { useAppStore } from '@/store'
 import { getOpenedEditFileIdAfterOpen } from '@/store/slices/editor/file-ids/editor-file-ids'
 import { scheduleEditorLineReveal } from '@/store/slices/editor/focus/editor-focus-reveal'
 import { detectLanguage } from '../../../../shared/editor-language/editor-language-detect'
-import { recordExplicitEditorJump } from '@/lib/workspace-navigation-history'
+import {
+  recordExplicitEditorJump,
+  suppressWorkspaceHistoryRecording
+} from '@/lib/workspace-navigation-history'
 import { modelContextByUri, resolveModelContext } from './monaco-ts-workspace-models'
 import { computeRelativePath } from './monaco-ts-workspace-imports'
 
@@ -69,6 +72,8 @@ export function registerWorkspaceEditorOpener(monaco: typeof Monaco): void {
         knownTarget?.relativePath ?? computeRelativePath(targetCtx.worktreePath, targetFilePath)
 
       const state = useAppStore.getState()
+      // Opening the target publishes its initial cursor before the explicit jump is recorded.
+      suppressWorkspaceHistoryRecording()
       state.openFile(
         {
           filePath: targetFilePath,

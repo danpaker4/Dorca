@@ -53,6 +53,7 @@ jobs:
           config/scripts/native-build/windows/build-windows-cli-launcher.test.mjs
           config/scripts/native-build/windows/windows-rust-executable-cache.test.mjs
           src/renderer/src/components/editor/monaco-ts-workspace-navigation.test.ts
+          src/renderer/src/components/editor/monaco-ts-workspace-opener.test.ts
           src/renderer/src/lib/editor/monaco/typescript-highlight-worker.test.ts
           src/shared/plugins/artifacts/plugin-theme-artifact.test.ts
           src/renderer/src/app-shell/appearance/terminal-app-theme.test.ts
