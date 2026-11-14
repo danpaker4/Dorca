@@ -7,6 +7,7 @@ import type { ModelWorkspaceContext } from './monaco-ts-workspace-models'
 import { callRuntimeRpc } from '@/runtime/rpc/calls/runtime-rpc-call'
 import { RuntimeRpcCallError } from '@/runtime/rpc/calls/runtime-rpc-result'
 import { toRuntimeWorktreeSelector } from '@/runtime/rpc/targets/runtime-worktree-selector'
+import { captureNavigationBuffers } from './monaco-ts-navigation-buffers'
 
 export async function queryHostTypeScriptNavigation(
   ctx: ModelWorkspaceContext,
@@ -48,7 +49,8 @@ export async function queryHostTypeScriptNavigation(
 
 export function prepareHostTypeScriptNavigation(
   ctx: ModelWorkspaceContext,
-  model: Monaco.editor.ITextModel
+  model: Monaco.editor.ITextModel,
+  monaco: Pick<typeof Monaco, 'editor' | 'Uri'>
 ): void {
   void queryHostTypeScriptNavigation(ctx, {
     rootPath: ctx.projectRootPath ?? ctx.worktreePath,
@@ -57,8 +59,10 @@ export function prepareHostTypeScriptNavigation(
     lineNumber: 1,
     column: 1,
     includeDeclaration: false,
-    buffers: [
-      { filePath: ctx.filePath, content: model.getValue(), languageId: model.getLanguageId() }
-    ]
+    buffers: [...captureNavigationBuffers(monaco, ctx, model)].map(([buffer, filePath]) => ({
+      filePath,
+      content: buffer.getValue(),
+      languageId: buffer.getLanguageId()
+    }))
   }).catch(() => undefined)
 }

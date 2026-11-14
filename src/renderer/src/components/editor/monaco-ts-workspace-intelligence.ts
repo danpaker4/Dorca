@@ -85,7 +85,7 @@ export function registerEditorInstanceForTsWorkspace(
         const model = editorInstance.getModel()
         const context = modelContextByUri.get(modelUriStr)
         if (model && context && TS_WORKSPACE_LANGUAGE_IDS.includes(model.getLanguageId())) {
-          prepareHostTypeScriptNavigation(context, model)
+          prepareHostTypeScriptNavigation(context, model, monaco)
         }
       } else {
         modelContextByUri.delete(modelUriStr)

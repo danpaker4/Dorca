@@ -1,18 +1,16 @@
 import type * as Monaco from 'monaco-editor'
-import { useAppStore } from '@/store'
 import { listRuntimeFiles } from '@/runtime/files/search/runtime-file-search-client'
-import { toEditorModelUri } from './model-lifetime/identity/editor-model-uri'
 import {
   resolveModelContext,
   registerTargetUriContext,
-  ensureCandidateFileModel,
-  modelContextByUri
+  ensureCandidateFileModel
 } from './monaco-ts-workspace-models'
 import { isInsideProject, normalizeProjectPath } from './monaco-ts-project-protocol'
 import { acquireNavigationSession, releaseNavigationSession } from './monaco-ts-navigation-session'
 import { loadProjectSnapshots } from './monaco-ts-project-snapshots'
 import { ReferenceCandidates } from './monaco-ts-reference-candidates'
 import { queryHostTypeScriptNavigation } from './monaco-ts-host-navigation'
+import { captureNavigationBuffers } from './monaco-ts-navigation-buffers'
 import type { TypeScriptNavigationLocation } from '../../../../shared/editor-language/typescript-navigation'
 import type { ModelWorkspaceContext } from './monaco-ts-workspace-models'
 
@@ -31,10 +29,11 @@ export async function queryWorkspaceSymbol(
   if (!ctx) {
     return null
   }
-  const version = model.getVersionId()
-  const buffers = new Map<Monaco.editor.ITextModel, number>([[model, version]])
-  const bufferFilePaths = new Map<Monaco.editor.ITextModel, string>([[model, ctx.filePath]])
-  const bufferPaths = new Set([normalizeProjectPath(ctx.filePath)])
+  const bufferFilePaths = captureNavigationBuffers(monaco, ctx, model)
+  const buffers = new Map(
+    [...bufferFilePaths.keys()].map((buffer) => [buffer, buffer.getVersionId()])
+  )
+  const bufferPaths = new Set([...bufferFilePaths.values()].map(normalizeProjectPath))
   const cancelled = (): boolean =>
     token.isCancellationRequested ||
     session.revision !== revision ||
@@ -46,52 +45,11 @@ export async function queryWorkspaceSymbol(
     ctx.assertAuthorityCurrent()
     const bufferNames: string[] = []
     const files: Record<string, string | null> = { ...session.files }
-    const state = useAppStore.getState()
-    const paths = new Set(
-      (state.openFiles ?? [])
-        .filter(
-          (file) =>
-            file.worktreeId === ctx.worktreeId &&
-            (file.runtimeEnvironmentId ?? null) === (ctx.runtimeEnvironmentId ?? null)
-        )
-        .map((file) => file.filePath)
-    )
-    const keptViews = new Set(
-      Object.values(state.editorBufferKept ?? {}).flatMap((entry) => entry.viewIds)
-    )
-    for (const candidate of modelContextByUri.values()) {
-      if (
-        candidate.worktreeId !== ctx.worktreeId ||
-        candidate.modelOwnerKey !== ctx.modelOwnerKey ||
-        !candidate.fileId ||
-        !keptViews.has(candidate.fileId)
-      ) {
-        continue
-      }
-      try {
-        candidate.assertAuthorityCurrent()
-        paths.add(candidate.filePath)
-      } catch {
-        continue
-      }
-    }
-    for (const filePath of paths) {
+    for (const [buffer, filePath] of bufferFilePaths) {
       const path = normalizeProjectPath(filePath)
-      if (!isInsideProject(root, path)) {
-        continue
-      }
-      const buffer = monaco.editor.getModel(
-        monaco.Uri.parse(toEditorModelUri(filePath, ctx.modelOwnerKey))
-      )
-      if (buffer) {
-        buffers.set(buffer, buffer.getVersionId())
-        bufferFilePaths.set(buffer, filePath)
-        bufferPaths.add(path)
-        files[path] = buffer.getValue()
-        bufferNames.push(path)
-      }
+      files[path] = buffer.getValue()
+      bufferNames.push(path)
     }
-    files[normalizeProjectPath(ctx.filePath)] = model.getValue()
     const native = await queryHostTypeScriptNavigation(ctx, {
       rootPath: ctx.projectRootPath ?? ctx.worktreePath,
       filePath: ctx.filePath,
