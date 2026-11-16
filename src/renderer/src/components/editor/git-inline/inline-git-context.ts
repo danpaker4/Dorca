@@ -8,7 +8,11 @@ import type { ExecutionHostId } from '../../../../../shared/execution-host'
 import type { RuntimeGitContext } from '@/runtime/source-control/git/runtime-git-client-context'
 import { BoundedMap } from '../../../../../shared/collections/bounded-map'
 
-export type InlineGitContext = RuntimeGitContext & { worktreeId: string; hostId: ExecutionHostId }
+export type InlineGitContext = RuntimeGitContext & {
+  worktreeId: string
+  worktreePath: string
+  hostId: ExecutionHostId
+}
 const contexts = new BoundedMap<string, InlineGitContext>({ maxEntries: 64 })
 
 export function resolveInlineGitContext(

@@ -14,25 +14,28 @@ import { formatNativeChatQuote } from '@/components/native-chat/selection-quotes
 import type { GitBlameDetail } from '../../../../../shared/git/blame/git-blame'
 import { useMonacoGitBlame } from './use-monaco-git-blame'
 import { GitBlameCard } from './GitBlameCard'
-import { GitBlameRevision } from './GitBlameRevision'
+import { openGitBlameChanges } from './open-git-blame-changes'
 import { explainBlamePrompt } from './git-blame-presentation'
-import './git-blame.css'
 
 type MonacoGitBlameProps = {
   source: editor.IStandaloneCodeEditor | null
   fileId: string
   relativePath: string
   enabled: boolean
+  revision?: string
+  mode?: 'off' | 'current-line' | 'file'
 }
 
 export function MonacoGitBlame(props: MonacoGitBlameProps): React.JSX.Element {
   const focusCard = useRef(false)
-  const mode = useAppStore((state) => state.settings?.editorGitBlameMode ?? 'current-line')
+  const preferredMode = useAppStore((state) => state.settings?.editorGitBlameMode ?? 'current-line')
+  const mode = props.mode ?? preferredMode
   const data = useMonacoGitBlame(
     props.source,
     props.fileId,
     props.relativePath,
-    props.enabled && mode !== 'off'
+    props.enabled && mode !== 'off',
+    props.revision
   )
   return (
     <MonacoGitBlameView
@@ -46,7 +49,8 @@ export function MonacoGitBlame(props: MonacoGitBlameProps): React.JSX.Element {
         props.source?.getId(),
         data.context,
         data.version,
-        data.snapshot?.head
+        data.snapshot?.head,
+        props.revision
       ])}
     />
   )
@@ -54,9 +58,9 @@ export function MonacoGitBlame(props: MonacoGitBlameProps): React.JSX.Element {
 
 function MonacoGitBlameView({
   source,
-  fileId,
   relativePath,
   enabled,
+  revision,
   mode,
   data,
   focusCard
@@ -70,17 +74,12 @@ function MonacoGitBlameView({
   const [detail, setDetail] = useState<GitBlameDetail | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const [revision, setRevision] = useState<{
-    detail: GitBlameDetail
-    compare: boolean
-    againstParent?: boolean
-    buffer: string
-  } | null>(null)
   const selected = useRef(selection)
   const snapshotRef = useRef(snapshot)
   const [channel] = useState(createNonSecureContextUuid)
   const sequence = useRef(0)
   const pinned = useRef(false)
+  const cardHovered = useRef(false)
   useEffect(() => {
     if (focusCard.current && snapshot) {
       pinned.current = true
@@ -114,14 +113,19 @@ function MonacoGitBlameView({
   }, [snapshot])
   const keepOpen = useCallback(() => clearTimeout(closeTimer.current), [])
   const closeSoon = useCallback(() => {
-    if (pinned.current) {
+    if (pinned.current || cardHovered.current) {
       return
     }
     clearTimeout(closeTimer.current)
-    closeTimer.current = setTimeout(() => setSelection(null), 350)
+    closeTimer.current = setTimeout(() => {
+      if (!pinned.current && !cardHovered.current) {
+        setSelection(null)
+      }
+    }, 350)
   }, [])
   useEffect(() => {
     if (!selection) {
+      cardHovered.current = false
       if (!focusCard.current) {
         pinned.current = false
       }
@@ -144,6 +148,7 @@ function MonacoGitBlameView({
     enabled,
     mode,
     relativePath,
+    revision,
     snapshot,
     snapshotRef,
     selected,
@@ -214,13 +219,25 @@ function MonacoGitBlameView({
       }).catch(() => {})
     }
   }, [selection, context, source, relativePath, channel])
+  const openChanges = (): void => {
+    if (!context || !detail || busy) {
+      return
+    }
+    openGitBlameChanges({
+      state: useAppStore.getState(),
+      context,
+      detail,
+      language: source?.getModel()?.getLanguageId() ?? 'plaintext',
+      runtimeEnvironmentId: file?.runtimeEnvironmentId
+    })
+    setSelection(null)
+  }
   const openCommit = (commit: string): void => {
     if (!context || !detail || busy) {
       return
     }
     if (context.worktreeId.startsWith('folder:') && commit === detail.attribution.commit) {
-      setRevision({ detail, compare: true, againstParent: true, buffer: '' })
-      setSelection(null)
+      openChanges()
       return
     }
     const captured = selection
@@ -296,14 +313,19 @@ function MonacoGitBlameView({
             variant="git-blame"
             data-git-blame-card
             align="start"
-            collisionBoundary={source?.getContainerDomNode()}
             collisionPadding={8}
-            onPointerEnter={keepOpen}
+            onPointerEnter={() => {
+              cardHovered.current = true
+              keepOpen()
+            }}
             onPointerDownCapture={() => {
               pinned.current = true
               keepOpen()
             }}
-            onPointerLeave={closeSoon}
+            onPointerLeave={() => {
+              cardHovered.current = false
+              closeSoon()
+            }}
             onFocusCapture={keepOpen}
             onBlurCapture={closeSoon}
             onKeyDown={(event) => {
@@ -346,18 +368,7 @@ function MonacoGitBlameView({
                   setSelection({ ...selection, target, newer: selection.newer.slice(0, -1) })
                 }
               }}
-              onRevision={() => {
-                if (detail) {
-                  setRevision({ detail, compare: false, buffer: '' })
-                  setSelection(null)
-                }
-              }}
-              onCompare={() => {
-                if (detail && source) {
-                  setRevision({ detail, compare: true, buffer: source.getValue() })
-                  setSelection(null)
-                }
-              }}
+              onOpenChanges={openChanges}
               onExplain={(event) => {
                 if (!detail || !context) {
                   return
@@ -375,16 +386,6 @@ function MonacoGitBlameView({
             />
           </HoverCardContent>
         </HoverCard>
-      )}
-      {revision && (
-        <GitBlameRevision
-          {...revision}
-          fileId={fileId}
-          filePath={file?.filePath ?? relativePath}
-          worktreeId={file?.worktreeId}
-          language={source?.getModel()?.getLanguageId() ?? 'plaintext'}
-          onClose={() => setRevision(null)}
-        />
       )}
     </>
   )

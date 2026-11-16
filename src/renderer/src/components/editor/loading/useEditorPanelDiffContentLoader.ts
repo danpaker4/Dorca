@@ -14,6 +14,7 @@ import type { EditorPanelContentLoadOptions } from '../external-changes/useEdito
 import { stampCleanTabDiskBaseline } from '../external-changes/editor-clean-tab-disk-baseline'
 import { translate } from '@/i18n/i18n'
 import { isWslDistroNotRunningRefusal } from '../../../../../shared/remote-runtime/wsl-hosts/wsl-distro-not-running-refusal'
+import { readBlameCommitDiff } from './read-blame-commit-diff'
 
 const inFlightDiffReads = new Map<string, InFlightContentRead<DiffContent>>()
 
@@ -100,21 +101,35 @@ export function useEditorPanelDiffContentLoader({
           const promise: Promise<DiffContent> =
             effectiveDiffSource === 'commit'
               ? commitCompare
-                ? getRuntimeGitCommitDiff(
-                    {
-                      target: fileTarget,
-                      worktreeId: file.worktreeId,
-                      worktreePath,
-                      connectionId
-                    },
-                    {
-                      commitOid: commitCompare.commitOid,
-                      parentOid: commitCompare.parentOid,
-                      filePath: file.relativePath,
-                      oldPath: file.branchOldPath
-                    },
-                    wake
-                  )
+                ? commitCompare.blameLine !== undefined
+                  ? readBlameCommitDiff(
+                      {
+                        target: fileTarget,
+                        worktreeId: file.worktreeId,
+                        worktreePath,
+                        connectionId
+                      },
+                      {
+                        commitOid: commitCompare.commitOid,
+                        blameLine: commitCompare.blameLine,
+                        filePath: file.relativePath
+                      }
+                    )
+                  : getRuntimeGitCommitDiff(
+                      {
+                        target: fileTarget,
+                        worktreeId: file.worktreeId,
+                        worktreePath,
+                        connectionId
+                      },
+                      {
+                        commitOid: commitCompare.commitOid,
+                        parentOid: commitCompare.parentOid,
+                        filePath: file.relativePath,
+                        oldPath: file.branchOldPath
+                      },
+                      wake
+                    )
                 : Promise.reject(new Error('Missing commit comparison for diff tab.'))
               : effectiveDiffSource === 'branch' && branchCompare
                 ? getRuntimeGitBranchDiff(

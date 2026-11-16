@@ -25818,10 +25818,6 @@
       "stagedNavigation": "Historical definitions are unavailable in the staged comparison.",
       "definitionNotice": "Go to Definition is available on the working-tree side. Historical definitions are unavailable."
     },
-    "diff": {
-      "definitionNotice": "Go to Definition is available on the working-tree side. Historical definitions are unavailable.",
-      "historicalNotice": "Historical definitions are unavailable. Open the working-tree file to navigate current definitions."
-    },
     "blame": {
       "you": "You",
       "uncommitted": "Uncommitted changes",
@@ -25831,17 +25827,12 @@
       "copyHash": "Copy hash",
       "copyMessage": "Copy message",
       "explain": "Explain",
-      "committer": "Committer",
       "diff": "Change preview",
       "noChange": "No changed lines at this position.",
       "parent": "Parent",
       "previous": "Previous line revision",
       "next": "Next line revision",
-      "revision": "Open revision",
-      "compare": "Compare with working tree",
-      "head": "HEAD",
-      "workingComparison": "Comparison with current working tree buffer",
-      "revisionNavigation": "Historical definitions are unavailable. Working-tree comparisons support Go to Definition on the modified side.",
+      "openChanges": "Open Changes",
       "toggle": "Git: Toggle File Blame",
       "show": "Git: Show Line History",
       "setting": "Git blame",

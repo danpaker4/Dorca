@@ -1,7 +1,6 @@
 import type * as Monaco from 'monaco-editor'
 import { useEffect, type RefObject } from 'react'
 import { monaco } from '@/lib/editor/monaco/monaco-setup'
-import { useTranslate } from '@/i18n/use-translate'
 import { applyModelLanguage } from '@/lib/monaco-languages/plugin-syntax-editor-options'
 import { useAppStore } from '@/store'
 import { getEditorModelOwnerKey } from '../../model-lifetime/identity/editor-model-owner'
@@ -13,7 +12,7 @@ export function useDiffEditorLanguageNavigation(
   fileId: string | undefined,
   filePath: string,
   worktreeId: string | undefined,
-  editable: boolean | undefined,
+  modifiedIsHistorical: boolean,
   language: string
 ): void {
   useEffect(() => {
@@ -29,26 +28,9 @@ export function useDiffEditorLanguageNavigation(
       fileId,
       filePath,
       worktreeId,
-      modifiedIsHistorical: !editable
+      modifiedIsHistorical
     })
-  }, [ref, mounted, fileId, filePath, worktreeId, editable])
-}
-
-export function DiffDefinitionNotice({ editable }: { editable?: boolean }): React.JSX.Element {
-  const t = useTranslate()
-  return (
-    <p className="border-b border-border px-2 py-1 text-xs text-muted-foreground">
-      {editable
-        ? t(
-            'dorca.diff.definitionNotice',
-            'Go to Definition is available on the working-tree side. Historical definitions are unavailable.'
-          )
-        : t(
-            'dorca.diff.historicalNotice',
-            'Historical definitions are unavailable. Open the working-tree file to navigate current definitions.'
-          )}
-    </p>
-  )
+  }, [ref, mounted, fileId, filePath, worktreeId, modifiedIsHistorical])
 }
 
 export function registerDiffEditorLanguageNavigation(

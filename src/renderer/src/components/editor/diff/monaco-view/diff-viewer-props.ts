@@ -14,6 +14,10 @@ export type DiffViewerProps = {
   relativePath: string
   sideBySide: boolean
   editable?: boolean
+  modifiedIsHistorical?: boolean
+  originalRevision?: string
+  modifiedRevision?: string
+  originalRelativePath?: string
   // Hosted review dialogs may have no workspace for local comments.
   worktreeId?: string
   /** The diff's tab; its review notes belong to the copy it names. */

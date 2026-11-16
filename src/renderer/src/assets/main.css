@@ -2075,6 +2075,17 @@ html.native-shell .app-layout {
   animation: none;
 }
 
+@utility git-blame-annotation {
+  color: var(--muted-foreground);
+  opacity: 0.7;
+  cursor: pointer;
+  font-style: italic;
+  padding-left: 3em;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 @utility git-blame-added {
   color: var(--git-decoration-added);
   background: color-mix(in srgb, var(--git-decoration-added) 10%, var(--popover));

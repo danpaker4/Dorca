@@ -58,6 +58,7 @@ jobs:
           src/main/ipc/filesystem/watcher-process/parcel-watcher-process.test.ts
           src/main/git/source-control/inline-hunks-real-git.test.ts
           src/main/git/source-control/blame/git-blame-query.test.ts
+          git-blame
           src/renderer/src/components/editor/monaco-ts-navigation-buffers.test.ts
           src/renderer/src/components/editor/monaco/use-monaco-editor-mount.cursor-owner.test.tsx
           config/scripts/dorca-release.test.mjs

@@ -8,7 +8,6 @@ import {
   diffViewStateCache,
   setWithLRU
 } from '@/components/editor/model-lifetime/retention/editor-view-state-cache'
-import { monacoTypographyOptions } from '@/lib/editor/appearance/editor-typography'
 import { useEditorTypography } from '@/hooks/use-editor-typography'
 import { useContextualCopySetup } from '../../contextual-copy/useContextualCopySetup'
 import { useDiffCommentDecorator } from '../../../diff-comments/useDiffCommentDecorator'
@@ -21,32 +20,22 @@ import {
   installEditorSaveShortcut,
   installMonacoEditorFindShortcut
 } from '../../commands/editor-shortcuts'
-import { diffEditorScrollbarOptions } from './diff-editor-scrollbar-options'
 import { LargeDiffFallback } from '../large-files/LargeDiffFallback'
 import { getLargeDiffRenderLimit } from '../../../../../../shared/large-diff-render-limit'
 import { useDiffViewerLargeDiffLifecycle } from '../large-files/useDiffViewerLargeDiffLifecycle'
 import { useDiffViewerFirstChangeAutoScroll } from './useDiffViewerFirstChangeAutoScroll'
 import { getDiffViewerLargeDiffSaveAction } from '../large-files/diff-viewer-large-diff-save-action'
 import type { DiffViewerProps } from './diff-viewer-props'
-import { buildDiffEditorWhitespaceOptions } from './diff-editor-whitespace-options'
-import {
-  buildDiffEditorWordWrapOptions,
-  syncDiffEditorOriginalWordWrap
-} from './diff-editor-word-wrap-options'
-import { buildDiffEditorHideUnchangedOptions } from './diff-editor-hide-unchanged-options'
+import { syncDiffEditorOriginalWordWrap } from './diff-editor-word-wrap-options'
+import { buildDiffEditorOptions } from './diff-editor-options'
 import { useDiffEditorRegistration } from '../review/diff-navigation-context'
 import { preserveDiffViewStateAcrossModelSwaps } from './diff-model-swap-view-state'
-import { monacoFindOptions } from '../../monaco/monaco-find-options'
-import { buildEditorUnicodeHighlightOptions } from '../../monaco/editor-unicode-highlight-options'
 import { usePluginSyntaxLanguage } from '../../monaco/use-plugin-syntax-language'
-import { PLUGIN_SYNTAX_EDITOR_OPTIONS } from '@/lib/monaco-languages/plugin-syntax-editor-options'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { cn } from '@/lib/class-names'
 import { wholeFileDiffTintClass } from './whole-file-diff-tint'
-import {
-  useDiffEditorLanguageNavigation,
-  DiffDefinitionNotice
-} from './diff-editor-language-navigation'
+import { useDiffEditorLanguageNavigation } from './diff-editor-language-navigation'
+import { MonacoDiffGitBlame } from '../../git-blame/MonacoDiffGitBlame'
 
 export default function DiffViewer({
   modelKey,
@@ -60,6 +49,10 @@ export default function DiffViewer({
   relativePath,
   sideBySide,
   editable,
+  modifiedIsHistorical = !editable,
+  originalRevision,
+  modifiedRevision,
+  originalRelativePath = relativePath,
   worktreeId,
   noteSource = NO_RESOURCE_EVIDENCE,
   onAddLineComment,
@@ -102,14 +95,15 @@ export default function DiffViewer({
   useLayoutEffect(() => {
     diffWordWrapRef.current = diffWordWrap
   }, [diffWordWrap])
-  const [modifiedEditor, setModifiedEditor] = useState<editor.ICodeEditor | null>(null)
+  const [modifiedEditor, setModifiedEditor] = useState<editor.IStandaloneCodeEditor | null>(null)
+  const [originalEditor, setOriginalEditor] = useState<editor.IStandaloneCodeEditor | null>(null)
   useDiffEditorLanguageNavigation(
     diffEditorRef,
     modifiedEditor,
     modelOwnerKey,
     filePath,
     worktreeId,
-    editable,
+    modifiedIsHistorical,
     language
   )
 
@@ -224,6 +218,7 @@ export default function DiffViewer({
       unregisterDiffEditor(fallenBackEditor)
     }
     setModifiedEditor(null)
+    setOriginalEditor(null)
   }, [unregisterDiffEditor])
 
   const onSaveRef = useRef(onSave)
@@ -277,12 +272,14 @@ export default function DiffViewer({
         unregisterDiffEditor(diffEditor)
         diffEditorRef.current = null
         setModifiedEditor(null)
+        setOriginalEditor(null)
       })
       diffEditor.onDidDispose(preserveDiffViewStateAcrossModelSwaps(diffEditor).dispose)
 
       setupCopy(originalEditor, monaco, filePath, propsRef)
       setupCopy(modifiedEditor, monaco, filePath, propsRef)
       setModifiedEditor(modifiedEditor)
+      setOriginalEditor(originalEditor)
 
       const savedViewState = diffViewStateCache.get(modelKey)
       if (savedViewState) {
@@ -354,26 +351,16 @@ export default function DiffViewer({
 
   // Why: @monaco-editor/react calls updateOptions whenever this object's identity changes.
   const editorOptions = useMemo<editor.IDiffEditorConstructionOptions>(
-    () => ({
-      dropIntoEditor: { enabled: false },
-      readOnly: !editable,
-      originalEditable: false,
-      renderSideBySide: sideBySide,
-      minimap: { enabled: false },
-      scrollBeyondLastLine: false,
-      ...PLUGIN_SYNTAX_EDITOR_OPTIONS,
-      ...monacoTypographyOptions(diffTypography),
-      lineNumbers: 'on',
-      ...buildDiffEditorWordWrapOptions(diffWordWrap),
-      ...buildDiffEditorWhitespaceOptions(diffShowWhitespace),
-      ...buildDiffEditorHideUnchangedOptions(diffCollapseUnchangedRegions),
-      automaticLayout: true,
-      renderOverviewRuler: true,
-      scrollbar: diffEditorScrollbarOptions,
-      padding: { top: 0 },
-      find: monacoFindOptions,
-      unicodeHighlight: buildEditorUnicodeHighlightOptions(language)
-    }),
+    () =>
+      buildDiffEditorOptions({
+        language,
+        editable,
+        sideBySide,
+        diffTypography,
+        diffWordWrap,
+        diffShowWhitespace,
+        diffCollapseUnchangedRegions
+      }),
     [
       language,
       editable,
@@ -387,7 +374,6 @@ export default function DiffViewer({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      <DiffDefinitionNotice editable={editable} />
       <div className="flex-1 min-h-0 relative">
         {renderLimit.limited ? (
           <LargeDiffFallback
@@ -425,6 +411,20 @@ export default function DiffViewer({
           />
         )}
       </div>
+      {modelOwnerKey && !renderLimit.limited && (
+        <MonacoDiffGitBlame
+          fileId={modelOwnerKey}
+          originalEditor={originalEditor}
+          modifiedEditor={modifiedEditor}
+          relativePath={relativePath}
+          originalRelativePath={originalRelativePath}
+          originalRevision={originalRevision}
+          modifiedRevision={modifiedRevision}
+          originalContent={originalContent}
+          modifiedContent={modifiedContent}
+          sideBySide={sideBySide}
+        />
+      )}
       {toastNode}
     </div>
   )

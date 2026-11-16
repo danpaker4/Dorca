@@ -15,6 +15,7 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
   testRepoPath,
   registerPostElectronShutdownCleanup
 }, testInfo) => {
+  // Includes hidden app startup, history requests, and a watcher refresh after committing.
   test.setTimeout(180_000)
   await orcaPage.setViewportSize({ width: 1280, height: 900 })
   const fixture = createGoldenWorktree(testRepoPath, 'blame-editor')
@@ -48,7 +49,11 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
   await activateGoldenWorktree(orcaPage, testRepoPath, fixture.worktreePath)
   await orcaPage.evaluate(async (filePath) => {
     const state = window.__store!.getState()
-    await state.updateSettings({ editorGitBlameMode: 'file', editorAutoSave: false })
+    await state.updateSettings({
+      editorGitBlameMode: 'file',
+      editorAutoSave: false,
+      diffDefaultView: 'side-by-side'
+    })
     state.openFile({
       filePath,
       relativePath: 'blame.ts',
@@ -67,11 +72,18 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
   await card.getByRole('button', { name: 'Next line revision' }).click()
   await expect(card).toContainText('Uncommitted changes')
   await orcaPage.screenshot({ path: testInfo.outputPath('blame-uncommitted.png') })
-  await card.getByRole('button', { name: 'Compare with working tree' }).click()
-  const comparison = orcaPage.getByRole('dialog')
-  await expect(comparison).toBeVisible()
-  await expect(comparison.locator('.monaco-diff-editor')).toBeVisible()
-  await orcaPage.keyboard.press('Escape')
+  await card.getByRole('button', { name: 'Open Changes' }).click()
+  await expect(orcaPage.locator('.monaco-diff-editor')).toBeVisible()
+  await orcaPage.evaluate((filePath) => {
+    const state = window.__store!.getState()
+    state.openFile({
+      filePath,
+      relativePath: 'blame.ts',
+      worktreeId: state.activeWorktreeId!,
+      language: 'typescript',
+      mode: 'edit'
+    })
+  }, filePath)
   await orcaPage.locator('.git-blame-annotation').first().hover()
   await card.getByRole('button', { name: 'Explain', exact: true }).click()
   await expect(orcaPage.getByRole('menu')).toBeVisible()
@@ -101,7 +113,7 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
   await orcaPage.locator('.monaco-editor').first().click()
   await orcaPage.keyboard.press('Alt+F8')
   await expect(card).toBeVisible()
-  await expect(card.getByRole('button', { name: 'Compare with working tree' })).toBeEnabled()
+  await expect(card.getByRole('button', { name: 'Open Changes' })).toBeEnabled()
   await expect(card).toBeInViewport()
   await card.getByRole('button', { name: 'Close', exact: true }).click({ trial: true })
   await orcaPage.screenshot({
@@ -114,7 +126,7 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
   )
   await orcaPage.locator('.monaco-editor').first().click()
   await orcaPage.keyboard.press('Alt+F8')
-  await expect(card.getByRole('button', { name: 'Compare with working tree' })).toBeEnabled()
+  await expect(card.getByRole('button', { name: 'Open Changes' })).toBeEnabled()
   await expect(card).toBeInViewport()
   await card.getByRole('button', { name: 'Close', exact: true }).click()
   await orcaPage.locator('.monaco-editor .view-line').filter({ hasText: 'first = 10' }).click()
@@ -127,6 +139,11 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
     { timeout: 60000 }
   )
   await expect(card.filter({ hasText: 'Uncommitted changes' })).not.toBeVisible()
+  await orcaPage.locator('.git-blame-annotation').first().hover()
+  await card.getByRole('button', { name: 'Open Changes' }).click()
+  const commitDiff = orcaPage.locator('.monaco-diff-editor')
+  await expect(commitDiff.locator('.monaco-editor').first()).toContainText('first = 1')
+  await expect(commitDiff.locator('.monaco-editor').last()).toContainText('first = 10')
   expect(
     await electronApp.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows().some((window) => window.isVisible())
@@ -217,7 +234,7 @@ test('keyboard blame opens from Off with reachable actions in a narrow editor', 
     .click()
   await orcaPage.keyboard.press('Alt+F8')
   const card = orcaPage.getByRole('region', { name: 'Git blame details' })
-  await expect(card.getByRole('button', { name: 'Compare with working tree' })).toBeEnabled()
+  await expect(card.getByRole('button', { name: 'Open Changes' })).toBeEnabled()
   await card.getByRole('button', { name: 'Close', exact: true }).click({ trial: true })
   await orcaPage.screenshot({
     path: testInfo.outputPath('keyboard-blame-narrow.png'),

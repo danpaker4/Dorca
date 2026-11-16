@@ -18,7 +18,8 @@ export function useMonacoGitBlame(
   source: editor.IStandaloneCodeEditor | null,
   fileId: string,
   relativePath: string,
-  enabled: boolean
+  enabled: boolean,
+  revision?: string
 ) {
   const file = useAppStore((state) => state.openFiles.find((entry) => entry.id === fileId))
   const status = useAppStore((state) =>
@@ -41,8 +42,8 @@ export function useMonacoGitBlame(
     [file?.worktreeId, file?.runtimeEnvironmentId, hostId, catalog, folders, enabled]
   )
   const identity = useMemo(
-    () => JSON.stringify([fileId, relativePath, context]),
-    [fileId, relativePath, context]
+    () => JSON.stringify([fileId, relativePath, context, revision]),
+    [fileId, relativePath, context, revision]
   )
   const [ownedSnapshot, setSnapshot] = useState<{
     snapshot: GitBlameSnapshot
@@ -99,7 +100,8 @@ export function useMonacoGitBlame(
           channel,
           sequence: request,
           filePath: relativePath,
-          bufferContent: model.getValue()
+          bufferContent: model.getValue(),
+          revision
         },
         active.signal
       )
@@ -175,7 +177,7 @@ export function useMonacoGitBlame(
         refreshRef.current = () => {}
       }
     }
-  }, [source, context, relativePath, channel, fileId, identity])
+  }, [source, context, relativePath, channel, fileId, identity, revision])
   useEffect(() => {
     refreshRef.current()
   }, [status])

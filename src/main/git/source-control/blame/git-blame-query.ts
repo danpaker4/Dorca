@@ -206,10 +206,14 @@ export async function queryGitBlame(
       parent,
       previousPath: workspacePrefix + previousPath,
       previousLine,
-      original: hunk?.originalText ?? '',
-      modified: hunk?.modifiedText ?? '',
+      original: hunk ? blamePreviewLine(hunk.originalText, targetLine - hunk.lineNumber) : '',
+      modified: hunk ? blamePreviewLine(hunk.modifiedText, targetLine - hunk.lineNumber) : '',
       originalContent,
       modifiedContent
     }
   }
+}
+
+function blamePreviewLine(text: string, offset: number): string {
+  return text.match(/[^\n]*\n|[^\n]+$/g)?.[offset] ?? ''
 }

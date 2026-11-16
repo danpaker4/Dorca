@@ -24,9 +24,9 @@ export function blameAge(timestamp: number | null, locale?: string): string {
 
 export function blameLabel(line: GitBlameLine, locale: string, t: Translate): string {
   if (!line.commit) {
-    return `${t('dorca.blame.you', 'You')}, ${blameAge(line.timestamp, locale)} · ${t('dorca.blame.uncommitted', 'Uncommitted changes')}`
+    return `${t('dorca.blame.you', 'You')}, ${blameAge(line.timestamp, locale)} • ${t('dorca.blame.uncommitted', 'Uncommitted changes')}`
   }
-  return `${line.author}, ${blameAge(line.timestamp, locale)} · ${line.summary}`
+  return `${line.author}, ${blameAge(line.timestamp, locale)} • ${line.summary}`
 }
 
 export function blameAvatar(email: string): string | undefined {

@@ -5,6 +5,7 @@ import { translate } from '@/i18n/i18n'
 import { useTranslate, useIntlLocale } from '@/i18n/use-translate'
 import type { GitBlameLine, GitBlameSnapshot } from '../../../../../shared/git/blame/git-blame'
 import { blameLabel } from './git-blame-presentation'
+import { getInclusiveEndLine } from '../contextual-copy/selection-copy'
 
 type LineTarget = { filePath: string; line: number; revision?: string; initial: GitBlameLine }
 export type BlameSelection = { target: LineTarget; newer: LineTarget[]; x: number; y: number }
@@ -14,6 +15,7 @@ export function useMonacoBlameDecorations({
   enabled,
   mode,
   relativePath,
+  revision,
   snapshot,
   snapshotRef,
   selected,
@@ -27,6 +29,7 @@ export function useMonacoBlameDecorations({
   enabled: boolean
   mode: 'off' | 'current-line' | 'file'
   relativePath: string
+  revision?: string
   snapshot: GitBlameSnapshot | null
   snapshotRef: RefObject<GitBlameSnapshot | null>
   selected: RefObject<BlameSelection | null>
@@ -52,7 +55,7 @@ export function useMonacoBlameDecorations({
         return
       }
       keepOpen()
-      if (selected.current?.target.line === line && !selected.current.target.revision) {
+      if (selected.current?.target.line === line && selected.current.target.revision === revision) {
         if (force) {
           setSelection({ ...selected.current })
         }
@@ -64,7 +67,7 @@ export function useMonacoBlameDecorations({
       })
       const bounds = source.getContainerDomNode().getBoundingClientRect()
       setSelection({
-        target: { filePath: relativePath, line, initial: attribution },
+        target: { filePath: relativePath, line, revision, initial: attribution },
         newer: [],
         x: Math.max(bounds.left, Math.min(bounds.right - 24, bounds.left + (position?.left ?? 0))),
         y: bounds.top + (position?.top ?? 0) + (position?.height ?? 0)
@@ -84,8 +87,14 @@ export function useMonacoBlameDecorations({
     }
     const render = (): void => {
       const model = source.getModel()
-      const currentLine = source.getPosition()?.lineNumber
       const ranges = source.getVisibleRanges()
+      const annotatedRanges =
+        mode === 'file'
+          ? ranges
+          : (source.getSelections() ?? []).map((selection) => ({
+              startLineNumber: selection.startLineNumber,
+              endLineNumber: getInclusiveEndLine(selection)
+            }))
       const layout = source.getLayoutInfo()
       const fontFamily = source.getOption(editor.EditorOption.fontFamily)
       const fontSize = source.getOption(editor.EditorOption.fontSize)
@@ -93,7 +102,7 @@ export function useMonacoBlameDecorations({
       const key = JSON.stringify([
         model?.uri.toString(),
         mode,
-        mode === 'file' ? null : currentLine,
+        annotatedRanges,
         ranges,
         layout.width,
         source.getScrollLeft(),
@@ -112,11 +121,12 @@ export function useMonacoBlameDecorations({
       for (const line of snapshotRef.current.lines) {
         if (
           line.line > model.getLineCount() ||
-          !(mode === 'file'
-            ? ranges.some(
-                (range) => line.line >= range.startLineNumber && line.line <= range.endLineNumber
-              )
-            : line.line === currentLine)
+          !ranges.some(
+            (range) => line.line >= range.startLineNumber && line.line <= range.endLineNumber
+          ) ||
+          !annotatedRanges.some(
+            (range) => line.line >= range.startLineNumber && line.line <= range.endLineNumber
+          )
         ) {
           continue
         }
@@ -168,7 +178,7 @@ export function useMonacoBlameDecorations({
     }
     const content = source.onDidChangeModelContent(clear)
     const model = source.onDidChangeModel(clear)
-    const cursor = source.onDidChangeCursorPosition(render)
+    const cursor = source.onDidChangeCursorSelection(render)
     const scroll = source.onDidScrollChange((event) => {
       if (event.scrollTopChanged || event.scrollLeftChanged) {
         render()
@@ -241,6 +251,7 @@ export function useMonacoBlameDecorations({
     enabled,
     mode,
     relativePath,
+    revision,
     snapshot,
     closeSoon,
     keepOpen,

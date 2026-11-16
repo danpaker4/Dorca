@@ -14,8 +14,7 @@ export function GitBlameCard({
   onNext,
   onCommit,
   onCopy,
-  onRevision,
-  onCompare,
+  onOpenChanges,
   onExplain,
   onClose
 }: {
@@ -28,8 +27,7 @@ export function GitBlameCard({
   onNext: () => void
   onCommit: (commit: string) => void
   onCopy: (value: string) => void
-  onRevision: () => void
-  onCompare: () => void
+  onOpenChanges: () => void
   onExplain: (event: React.MouseEvent<HTMLButtonElement>) => void
   onClose: () => void
 }): React.JSX.Element {
@@ -122,19 +120,12 @@ export function GitBlameCard({
           <p className="break-all text-muted-foreground">
             {line.path}:{line.originalLine}
           </p>
-          {line.commit && (
-            <p className="break-words text-muted-foreground">
-              {t('dorca.blame.committer', 'Committer')}: {detail.committer}
-              {detail.committedAt !== null &&
-                ` · ${new Date(detail.committedAt).toLocaleString(locale)}`}
-            </p>
-          )}
           <div
             className="max-h-48 overflow-auto rounded-md border border-border font-mono scrollbar-sleek"
             aria-label={t('dorca.blame.diff', 'Change preview')}
           >
             {detail.original && (
-              <pre className="git-blame-removed px-2 py-1 whitespace-pre-wrap break-all">
+              <pre className="git-blame-removed px-2 py-1 whitespace-pre">
                 {detail.original
                   .replace(/\n$/, '')
                   .split('\n')
@@ -143,7 +134,7 @@ export function GitBlameCard({
               </pre>
             )}
             {detail.modified && (
-              <pre className="git-blame-added px-2 py-1 whitespace-pre-wrap break-all">
+              <pre className="git-blame-added px-2 py-1 whitespace-pre">
                 {detail.modified
                   .replace(/\n$/, '')
                   .split('\n')
@@ -186,13 +177,8 @@ export function GitBlameCard({
         <Button variant="ghost" size="xs" disabled={busy || !canBack} onClick={onNext}>
           {t('dorca.blame.next', 'Next line revision')}
         </Button>
-        {line.commit && (
-          <Button variant="ghost" size="xs" disabled={busy || !detail} onClick={onRevision}>
-            {t('dorca.blame.revision', 'Open revision')}
-          </Button>
-        )}
-        <Button variant="ghost" size="xs" disabled={busy || !detail} onClick={onCompare}>
-          {t('dorca.blame.compare', 'Compare with working tree')}
+        <Button variant="ghost" size="xs" disabled={busy || !detail} onClick={onOpenChanges}>
+          {t('dorca.blame.openChanges', 'Open Changes')}
         </Button>
       </div>
     </section>

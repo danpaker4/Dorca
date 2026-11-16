@@ -40,6 +40,7 @@ export function toCommitCompareSnapshot(
   return {
     commitOid: compare.commitOid,
     parentOid: compare.parentOid,
+    blameLine: compare.blameLine,
     compareRef: compare.compareRef,
     baseRef: compare.baseRef,
     compareVersion: `${compare.parentOid ?? 'empty-tree'}:${compare.commitOid}`,

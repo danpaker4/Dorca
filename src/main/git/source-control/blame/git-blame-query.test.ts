@@ -76,7 +76,7 @@ it('returns root commit details and the deleted/added preview without inventing 
   expect(detail?.parent).toBeNull()
   expect(detail?.message).toBe('Root message\n\nFull commit body')
   expect(detail?.original).toBe('')
-  expect(detail?.modified).toBe('first\nsecond\n')
+  expect(detail?.modified).toBe('first\n')
 })
 
 it('reports the working tree diff against HEAD, including staged and unsaved edits', async () => {
@@ -90,6 +90,49 @@ it('reports the working tree diff against HEAD, including staged and unsaved edi
   expect(detail?.attribution.commit).toBeNull()
   expect(detail?.original).toBe('second\n')
   expect(detail?.modified).toBe('unsaved\n')
+})
+
+it.each([
+  {
+    name: 'a line in a multi-line replacement',
+    before: 'first\nold second\nold third\nlast\n',
+    after: 'first\nnew second\nnew third\nlast\n',
+    line: 3,
+    original: 'old third\n',
+    modified: 'new third\n'
+  },
+  {
+    name: 'a replacement that removes continuation lines',
+    before: 'first\nconst result = condition\n  ? before()\n  : fallback()\nlast\n',
+    after: 'first\nconst result = after()\nlast\n',
+    line: 2,
+    original: 'const result = condition\n',
+    modified: 'const result = after()\n'
+  },
+  {
+    name: 'an added line without a corresponding removed line',
+    before: 'first\nold second\nlast\n',
+    after: 'first\nnew second\nnew third\nlast\n',
+    line: 3,
+    original: '',
+    modified: 'new third\n'
+  }
+])('limits the blame preview to $name in working and committed revisions', async (example) => {
+  const { root, git, query } = await fixture()
+  await writeFile(join(root, 'file.ts'), example.before)
+  await git('add', '.')
+  await git('commit', '--quiet', '-m', 'Before replacement')
+  const working = await query(example.after, { mode: 'detail', line: example.line })
+  expect(working.detail?.original).toBe(example.original)
+  expect(working.detail?.modified).toBe(example.modified)
+  await writeFile(join(root, 'file.ts'), example.after)
+  await git('add', '.')
+  await git('commit', '--quiet', '-m', 'Replace lines')
+  const committed = await query(example.after, { mode: 'detail', line: example.line })
+  expect(committed.detail?.original).toBe(example.original)
+  expect(committed.detail?.modified).toBe(example.modified)
+  expect(committed.detail?.originalContent).toBe(example.before)
+  expect(committed.detail?.modifiedContent).toBe(example.after)
 })
 
 it('does not navigate an inserted line to an unrelated neighbouring line', async () => {

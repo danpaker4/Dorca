@@ -29,6 +29,7 @@ export type CommitCompareLike = Pick<
 > & {
   subject?: string
   message?: string
+  blameLine?: number
 }
 
 // Check mode before filePath: OpenFile is not a discriminated union and conflict-review paths name roots, not files.

@@ -39,6 +39,7 @@ export type CommitCompareSnapshot = Pick<
   compareVersion: string
   subject?: string
   message?: string
+  blameLine?: number
 }
 
 export type CombinedDiffAlternate = {

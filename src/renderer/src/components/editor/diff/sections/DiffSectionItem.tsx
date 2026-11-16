@@ -23,6 +23,7 @@ import type { DiffSectionItemProps } from './diff-section-item-props'
 import { useDiffSectionModelLifecycle } from './use-diff-section-model-lifecycle'
 import { hasLayoutBox } from '@/hooks/virtualized-hidden-row-measurement'
 import { DiffSectionSaveConflictBar } from './DiffSectionSaveConflictBar'
+import { MonacoDiffGitBlame } from '../../git-blame/MonacoDiffGitBlame'
 
 export function DiffSectionItem({
   section,
@@ -55,6 +56,7 @@ export function DiffSectionItem({
   const diffTypography = useEditorTypography('diff')
   const diffWordWrap = useAppStore((s) => s.settings?.diffWordWrap)
   const diffShowWhitespace = useAppStore((s) => s.settings?.diffShowWhitespace)
+  const blameFile = useAppStore((s) => s.openFiles.find((file) => file === noteSource))
   // One read: the stable notes array and the copy it belongs to; filter below so unrelated writes don't invalidate.
   const { owner: commentOwner, comments: allDiffComments } = useDiffCommentView(
     worktreeId,
@@ -77,7 +79,12 @@ export function DiffSectionItem({
     [section.contentGeneration, section.key, worktreeId]
   )
 
-  const [modifiedEditor, setModifiedEditor] = useState<monacoEditor.ICodeEditor | null>(null)
+  const [modifiedEditor, setModifiedEditor] = useState<monacoEditor.IStandaloneCodeEditor | null>(
+    null
+  )
+  const [originalEditor, setOriginalEditor] = useState<monacoEditor.IStandaloneCodeEditor | null>(
+    null
+  )
   const diffEditorRef = useRef<monacoEditor.IStandaloneDiffEditor | null>(null)
   const lineNumberOptionsSubRef = useRef<{ dispose: () => void } | null>(null)
   const hasLineCommentAction = Boolean(worktreeId || onAddLineComment)
@@ -219,6 +226,7 @@ export function DiffSectionItem({
     }
 
     setModifiedEditor(modified)
+    setOriginalEditor(editor.getOriginalEditor())
     // Monaco disposes inner editors on unmount; clear state so decorators and drafts cannot retain a disposed instance.
     modified.onDidDispose(() => {
       contentSizeSub.dispose()
@@ -234,6 +242,7 @@ export function DiffSectionItem({
         modifiedEditorsRef.current.delete(index)
       }
       setModifiedEditor(null)
+      setOriginalEditor(null)
     })
 
     if (!isEditable) {
@@ -341,6 +350,32 @@ export function DiffSectionItem({
           onLoadDeferredSection={loadDeferredSection ?? loadSection}
           onSaveLimitedDiff={() => void handleSectionSaveRef.current(index)}
           onMount={handleMount}
+        />
+      )}
+      {blameFile && !section.collapsed && !isLargeDiffLimited && (
+        <MonacoDiffGitBlame
+          fileId={blameFile.id}
+          originalEditor={originalEditor}
+          modifiedEditor={modifiedEditor}
+          relativePath={section.path}
+          originalRelativePath={section.oldPath ?? section.path}
+          originalRevision={
+            section.area
+              ? undefined
+              : (blameFile.branchCompare?.mergeBase ??
+                blameFile.commitCompare?.parentOid ??
+                undefined)
+          }
+          modifiedRevision={
+            section.area
+              ? undefined
+              : (blameFile.branchCompare?.headOid ??
+                blameFile.commitCompare?.commitOid ??
+                undefined)
+          }
+          originalContent={section.originalContent}
+          modifiedContent={section.modifiedContent}
+          sideBySide={sideBySide}
         />
       )}
     </div>

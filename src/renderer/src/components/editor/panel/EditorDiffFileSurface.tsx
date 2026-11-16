@@ -164,6 +164,20 @@ export function EditorDiffFileSurface({
       relativePath={activeFile.relativePath}
       sideBySide={sideBySide}
       editable={isEditable}
+      originalRelativePath={activeFile.branchOldPath ?? activeFile.relativePath}
+      originalRevision={
+        activeFile.diffSource === 'branch'
+          ? (activeFile.branchCompare?.mergeBase ?? undefined)
+          : (activeFile.commitCompare?.parentOid ?? undefined)
+      }
+      modifiedRevision={
+        activeFile.diffSource === 'branch'
+          ? (activeFile.branchCompare?.headOid ?? undefined)
+          : activeFile.commitCompare?.commitOid
+      }
+      modifiedIsHistorical={
+        !isEditable && activeFile.diffSource !== 'branch' && activeFile.diffSource !== 'staged'
+      }
       worktreeId={activeFile.worktreeId}
       noteSource={activeFile}
       onContentChange={isEditable ? onContentChange : undefined}
