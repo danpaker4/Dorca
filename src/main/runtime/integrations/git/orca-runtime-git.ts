@@ -13,6 +13,7 @@ export class RuntimeGitCommands {
   readonly getRuntimeGitHistory: RuntimeGitStatusCommands['getRuntimeGitHistory']
   readonly getRuntimeGitConflictOperation: RuntimeGitStatusCommands['getRuntimeGitConflictOperation']
   readonly getRuntimeGitMutationInFlight: RuntimeGitStatusCommands['getRuntimeGitMutationInFlight']
+  readonly readRuntimeWorktreeAtRiskLocalFiles: RuntimeGitStatusCommands['readRuntimeWorktreeAtRiskLocalFiles']
   readonly switchRuntimeGitBranch: RuntimeGitStatusCommands['switchRuntimeGitBranch']
   readonly checkoutRuntimeGitBranch: RuntimeGitStatusCommands['checkoutRuntimeGitBranch']
   readonly listRuntimeGitLocalBranches: RuntimeGitStatusCommands['listRuntimeGitLocalBranches']
@@ -45,6 +46,7 @@ export class RuntimeGitCommands {
   readonly cancelRuntimeGeneratePullRequestFields: RuntimeGitGenerationCommands['cancelRuntimeGeneratePullRequestFields']
   readonly discoverRuntimeCommitMessageModels: RuntimeGitGenerationCommands['discoverRuntimeCommitMessageModels']
   readonly getRuntimeGitInlineSnapshot: RuntimeGitStagingCommands['getRuntimeGitInlineSnapshot']
+  readonly getRuntimeGitBlame: RuntimeGitStagingCommands['getRuntimeGitBlame']
   readonly applyRuntimeGitInlineHunk: RuntimeGitStagingCommands['applyRuntimeGitInlineHunk']
   readonly stageRuntimeGitPath: RuntimeGitStagingCommands['stageRuntimeGitPath']
   readonly resolveRuntimeGitConflict: RuntimeGitStagingCommands['resolveRuntimeGitConflict']
@@ -68,6 +70,8 @@ export class RuntimeGitCommands {
     this.getRuntimeGitHistory = status.getRuntimeGitHistory.bind(status)
     this.getRuntimeGitConflictOperation = status.getRuntimeGitConflictOperation.bind(status)
     this.getRuntimeGitMutationInFlight = status.getRuntimeGitMutationInFlight.bind(status)
+    this.readRuntimeWorktreeAtRiskLocalFiles =
+      status.readRuntimeWorktreeAtRiskLocalFiles.bind(status)
     this.switchRuntimeGitBranch = status.switchRuntimeGitBranch.bind(status)
     this.checkoutRuntimeGitBranch = status.checkoutRuntimeGitBranch.bind(status)
     this.listRuntimeGitLocalBranches = status.listRuntimeGitLocalBranches.bind(status)
@@ -104,6 +108,7 @@ export class RuntimeGitCommands {
     this.discoverRuntimeCommitMessageModels =
       generation.discoverRuntimeCommitMessageModels.bind(generation)
     this.getRuntimeGitInlineSnapshot = staging.getRuntimeGitInlineSnapshot.bind(staging)
+    this.getRuntimeGitBlame = staging.getRuntimeGitBlame.bind(staging)
     this.applyRuntimeGitInlineHunk = staging.applyRuntimeGitInlineHunk.bind(staging)
     this.stageRuntimeGitPath = staging.stageRuntimeGitPath.bind(staging)
     this.resolveRuntimeGitConflict = staging.resolveRuntimeGitConflict.bind(staging)

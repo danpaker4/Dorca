@@ -8,7 +8,7 @@ import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
 import {
   TYPESCRIPT_LANGUAGE_SERVER_DIRECTORY,
   typeScriptLanguageServerBinary
-} from '../../shared/orcad-artifacts'
+} from '../../shared/remote-runtime/orcad-distribution/orcad-artifacts'
 import type { TypeScriptNavigationRequest } from '../../shared/editor-language/typescript-navigation'
 
 vi.mock(

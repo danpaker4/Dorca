@@ -1,7 +1,7 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { planDorcaRelease } from './dorca-release-plan.mjs'
+import { planDorcaRelease, DORCA_WINDOWS_ONLY_RELEASE_MARKER } from './dorca-release-plan.mjs'
 import { integrateOrcaRelease } from './dorca-upstream-integration.mjs'
 
 const REPO = 'danpaker4/Dorca'
@@ -149,9 +149,13 @@ if (process.argv[2] === 'prepare') {
   const featureNotes = existsSync(featureNotesPath)
     ? `${readFileSync(featureNotesPath, 'utf8')}\n\n`
     : ''
+  const platformNotes =
+    process.env.DORCA_WINDOWS_ONLY === '1'
+      ? `This release contains Windows installers only.\n\n${DORCA_WINDOWS_ONLY_RELEASE_MARKER}`
+      : 'Mac installers are added by the macOS build workflow after validation; Mac updates are installed manually.'
   writeFileSync(
     notes,
-    `${featureNotes}Dorca ${release.version}, based on Orca ${release.upstreamTag}, upstream commit \`${release.upstreamCommit}\`.\n\nWindows: download and run **dorca-windows-setup.exe**. Future Windows releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. Mac installers are added by the macOS build workflow after validation; Mac updates are installed manually.\n`
+    `${featureNotes}Dorca ${release.version}, based on Orca ${release.upstreamTag}, upstream commit \`${release.upstreamCommit}\`.\n\nWindows: download and run **dorca-windows-setup.exe**. Future Windows releases install through **Download → Update & Restart**, without Git or compilation.\n\nWindows installers are unsigned and may show an unknown-publisher prompt. ${platformNotes}\n`
   )
   if (!existing) {
     gh(

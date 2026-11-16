@@ -1,5 +1,5 @@
 import { ipcMain } from 'electron'
-import { TypeScriptNavigationPayload } from '../../../shared/rpc-contract/files-params'
+import { TypeScriptNavigationPayload } from '../../../shared/rpc-contract/filesystem/files-params'
 import {
   authorizeTypeScriptNavigation,
   restoreTypeScriptNavigationPaths

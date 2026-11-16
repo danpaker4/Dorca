@@ -5,7 +5,7 @@ const {
   TYPESCRIPT_LANGUAGE_SERVER_DIRECTORY,
   typeScriptLanguageServerBinary,
   ORCAD_TYPESCRIPT_LIBRARY_ARTIFACTS
-} = require('../src/shared/orcad-artifacts.ts')
+} = require('../src/shared/remote-runtime/orcad-distribution/orcad-artifacts.ts')
 
 function typeScriptLanguageServerFiles(platform, arch, projectDir = join(__dirname, '..')) {
   const require = createRequire(join(projectDir, 'package.json'))

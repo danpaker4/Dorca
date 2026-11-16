@@ -2,7 +2,7 @@ import type {
   TypeScriptNavigationRequest,
   TypeScriptNavigationResult
 } from '../../shared/editor-language/typescript-navigation'
-import { getAppEnvironment, hasAppEnvironment } from '../../shared/app-environment'
+import { getAppEnvironment, hasAppEnvironment } from '../../shared/app-lifecycle/app-environment'
 import { TypeScriptLanguageServer } from './typescript-language-server'
 import { resolveTypeScriptServerBinary } from './typescript-server-binary'
 import { watchFileExplorerInWatcherProcess } from '../runtime/files/watch/file-watcher-host'

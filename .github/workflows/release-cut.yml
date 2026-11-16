@@ -837,15 +837,6 @@ jobs:
         with:
           ref: refs/tags/${{ needs.cut.outputs.tag }}
 
-      - name: Restore skill-sharing test harness from the workflow ref
-        shell: bash
-        env:
-          WORKFLOW_SHA: ${{ github.workflow_sha }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$WORKFLOW_SHA"
-          git checkout "$WORKFLOW_SHA" -- \
-            src/main/skills/skill-provider-runtime-roots.test.ts
-
       - uses: ./.github/actions/install-node-dependencies
         with:
           native-runtime: node
@@ -894,15 +885,6 @@ jobs:
 
       - name: Trust the checked-out workspace in the job container
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
-
-      - name: Restore skill-sharing test harness from the workflow ref
-        shell: bash
-        env:
-          WORKFLOW_SHA: ${{ github.workflow_sha }}
-        run: |
-          git fetch --no-tags --depth=1 origin "$WORKFLOW_SHA"
-          git checkout "$WORKFLOW_SHA" -- \
-            src/main/skills/skill-provider-runtime-roots.test.ts
 
       - uses: ./.github/actions/install-node-dependencies
         with:

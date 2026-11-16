@@ -95,6 +95,7 @@ export function applyHistoryEntry(entry: NavHistoryEntry): boolean {
 
   if (entry.kind === 'editor') {
     const existingOpenFile =
+      state.openFiles?.find((file) => file.worktreeId === worktreeId && file.id === entry.fileId) ??
       state.openFiles?.find(
         (f) =>
           f.worktreeId === worktreeId &&

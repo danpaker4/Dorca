@@ -26,7 +26,7 @@ export async function queryWorkspaceSymbol(
   includeDeclaration = true
 ): Promise<Monaco.languages.Location[] | null> {
   const ctx = resolveModelContext(model.uri.toString())
-  if (!ctx) {
+  if (!ctx || ctx.historical || ctx.isHistorical?.()) {
     return null
   }
   const bufferFilePaths = captureNavigationBuffers(monaco, ctx, model)

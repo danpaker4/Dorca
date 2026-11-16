@@ -15,6 +15,10 @@ function CompactPeek(): React.JSX.Element {
     <div style={{ height }}>
       <InlineGitPeek
         hunk={hunk}
+        originalContent="const service = createProjectService(files, roots, {"
+        modifiedContent="const options: CompilerOptions = {"
+        fileId="fixture"
+        filePath="/fixture/example.ts"
         staged={false}
         language="typescript"
         position={1}

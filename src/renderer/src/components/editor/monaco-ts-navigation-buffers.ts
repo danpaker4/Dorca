@@ -41,6 +41,9 @@ export function captureNavigationBuffers(
   }
   const root = normalizeProjectPath(context.projectRootPath ?? context.worktreePath)
   for (const filePath of paths) {
+    if (normalizeProjectPath(filePath) === normalizeProjectPath(context.filePath)) {
+      continue
+    }
     if (!isInsideProject(root, normalizeProjectPath(filePath))) {
       continue
     }

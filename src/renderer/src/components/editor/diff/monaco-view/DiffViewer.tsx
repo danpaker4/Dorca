@@ -10,14 +10,17 @@ import {
 } from '@/components/editor/model-lifetime/retention/editor-view-state-cache'
 import { monacoTypographyOptions } from '@/lib/editor/appearance/editor-typography'
 import { useEditorTypography } from '@/hooks/use-editor-typography'
-import { useContextualCopySetup } from '../../useContextualCopySetup'
+import { useContextualCopySetup } from '../../contextual-copy/useContextualCopySetup'
 import { useDiffCommentDecorator } from '../../../diff-comments/useDiffCommentDecorator'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { useTranslate } from '@/i18n/use-translate'
 import { applyDiffEditorLineNumberOptions } from './diff-editor-line-number-options'
 import { isDiffComment } from '@/lib/source-control/review/comments/diff-comment-compat'
-import { installEditorSaveShortcut, installMonacoEditorFindShortcut } from '../../editor-shortcuts'
+import {
+  installEditorSaveShortcut,
+  installMonacoEditorFindShortcut
+} from '../../commands/editor-shortcuts'
 import { diffEditorScrollbarOptions } from './diff-editor-scrollbar-options'
 import { LargeDiffFallback } from '../large-files/LargeDiffFallback'
 import { getLargeDiffRenderLimit } from '../../../../../../shared/large-diff-render-limit'
@@ -33,16 +36,17 @@ import {
 import { buildDiffEditorHideUnchangedOptions } from './diff-editor-hide-unchanged-options'
 import { useDiffEditorRegistration } from '../review/diff-navigation-context'
 import { preserveDiffViewStateAcrossModelSwaps } from './diff-model-swap-view-state'
-import { monacoFindOptions } from '../../monaco-find-options'
-import { buildEditorUnicodeHighlightOptions } from '../../editor-unicode-highlight-options'
-import { usePluginSyntaxLanguage } from '../../use-plugin-syntax-language'
-import {
-  PLUGIN_SYNTAX_EDITOR_OPTIONS,
-  applyModelLanguage
-} from '@/lib/monaco-languages/plugin-syntax-editor-options'
+import { monacoFindOptions } from '../../monaco/monaco-find-options'
+import { buildEditorUnicodeHighlightOptions } from '../../monaco/editor-unicode-highlight-options'
+import { usePluginSyntaxLanguage } from '../../monaco/use-plugin-syntax-language'
+import { PLUGIN_SYNTAX_EDITOR_OPTIONS } from '@/lib/monaco-languages/plugin-syntax-editor-options'
 import { useMonacoTheme } from '@/hooks/use-monaco-theme'
 import { cn } from '@/lib/class-names'
 import { wholeFileDiffTintClass } from './whole-file-diff-tint'
+import {
+  useDiffEditorLanguageNavigation,
+  DiffDefinitionNotice
+} from './diff-editor-language-navigation'
 
 export default function DiffViewer({
   modelKey,
@@ -99,10 +103,15 @@ export default function DiffViewer({
     diffWordWrapRef.current = diffWordWrap
   }, [diffWordWrap])
   const [modifiedEditor, setModifiedEditor] = useState<editor.ICodeEditor | null>(null)
-  useEffect(() => {
-    const models = diffEditorRef.current?.getModel()
-    applyModelLanguage([models?.original, models?.modified], language)
-  }, [modifiedEditor, language])
+  useDiffEditorLanguageNavigation(
+    diffEditorRef,
+    modifiedEditor,
+    modelOwnerKey,
+    filePath,
+    worktreeId,
+    editable,
+    language
+  )
 
   const renderLimit = useMemo(
     () => largeDiffRenderLimit ?? getLargeDiffRenderLimit({ originalContent, modifiedContent }),
@@ -275,12 +284,10 @@ export default function DiffViewer({
       setupCopy(modifiedEditor, monaco, filePath, propsRef)
       setModifiedEditor(modifiedEditor)
 
-      // Restore cursor and selection across both panes alongside scroll.
       const savedViewState = diffViewStateCache.get(modelKey)
       if (savedViewState) {
         requestAnimationFrame(() => diffEditor.restoreViewState(savedViewState))
       }
-      // Auto-scroll runs separately after decorator view zones mount.
 
       if (editable) {
         const cleanupSaveShortcut = installEditorSaveShortcut(
@@ -380,6 +387,7 @@ export default function DiffViewer({
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
+      <DiffDefinitionNotice editable={editable} />
       <div className="flex-1 min-h-0 relative">
         {renderLimit.limited ? (
           <LargeDiffFallback

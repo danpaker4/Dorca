@@ -3,7 +3,10 @@ import {
   resolveGitMetadataPath,
   resolveWorktreeHostPath
 } from '../../../shared/git/metadata/git-metadata-path'
-import { gitOptionsForWorktree, type GitRuntimeOptions } from '../git-runtime-options'
+import {
+  gitOptionsForWorktree,
+  type GitRuntimeOptions
+} from '../command-runner/git-runtime-options'
 import { gitExecFileAsync } from '../command-runner/git-exec-file'
 
 export async function inlineIndexPath(

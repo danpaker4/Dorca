@@ -34,6 +34,7 @@ export function MonacoGitChanges({
   const [snapshot, setSnapshot] = useState<GitInlineSnapshot | null>(null)
   const [buffer, setBuffer] = useState('')
   const [selected, setSelected] = useState<number | null>(null)
+  const [anchorLine, setAnchorLine] = useState(1)
   const [zone, setZone] = useState<HTMLDivElement | null>(null)
   const resizePeek = useRef<((height: number) => void) | null>(null)
   const onPeekHeightChange = useCallback((height: number) => resizePeek.current?.(height), [])
@@ -157,6 +158,7 @@ export function MonacoGitChanges({
     }
   }, [headContent, indexContent, headExists, indexExists, diskExists, buffer])
   const current = selected === null ? undefined : changes[selected]
+  const peekOpen = Boolean(current)
   const changesRef = useRef(changes)
   useEffect(() => {
     changesRef.current = changes
@@ -188,17 +190,22 @@ export function MonacoGitChanges({
       }
       const line = event.target.position.lineNumber
       const staged = event.target.element?.classList.contains('git-inline-staged') ?? false
-      const index = changesRef.current.findIndex(
-        (change) =>
-          change.staged === staged &&
-          line >= Math.min(change.line, source.getModel()?.getLineCount() ?? 1) &&
-          line <=
-            Math.min(
-              change.staged ? change.line : change.hunk.endLineNumber,
-              source.getModel()?.getLineCount() ?? 1
-            )
-      )
+      const marker = event.target.element?.closest('[class*="git-inline-change-"]')
+      const markerIndex = Number(marker?.className.match(/\bgit-inline-change-(\d+)\b/)?.[1])
+      const index = Number.isInteger(markerIndex)
+        ? markerIndex
+        : changesRef.current.findIndex(
+            (change) =>
+              change.staged === staged &&
+              line >= Math.min(change.line, source.getModel()?.getLineCount() ?? 1) &&
+              line <=
+                Math.min(
+                  change.staged ? change.line : change.hunk.endLineNumber,
+                  source.getModel()?.getLineCount() ?? 1
+                )
+          )
       if (index !== -1) {
+        setAnchorLine(line)
         setSelected(index)
         setError(null)
       }
@@ -216,6 +223,7 @@ export function MonacoGitChanges({
         const line = source.getPosition()?.lineNumber ?? 1
         const index = changesRef.current.findIndex((change) => change.line >= line)
         if (changesRef.current.length) {
+          setAnchorLine(changesRef.current[index === -1 ? 0 : index].line)
           setSelected(index === -1 ? 0 : index)
           setError(null)
         }
@@ -231,19 +239,21 @@ export function MonacoGitChanges({
       return
     }
     const decorations = source.createDecorationsCollection(
-      changes.map((change) => ({
+      changes.map((change, index) => ({
         range: new Range(
           Math.min(change.line, source.getModel()?.getLineCount() ?? 1),
           1,
           Math.min(
-            change.staged ? change.line : change.hunk.endLineNumber,
+            change.staged || change.hunk.kind === 'deleted'
+              ? change.line
+              : change.hunk.endLineNumber,
             source.getModel()?.getLineCount() ?? 1
           ),
           1
         ),
         options: {
           isWholeLine: true,
-          linesDecorationsClassName: `git-inline-marker ${change.staged ? 'git-inline-staged' : ''} git-inline-${change.hunk.kind}`,
+          linesDecorationsClassName: `git-inline-marker git-inline-change-${index} ${change.staged ? 'git-inline-staged' : ''} git-inline-${change.hunk.kind} ${change.line > (source.getModel()?.getLineCount() ?? 1) ? 'git-inline-at-end' : change.line === 1 ? 'git-inline-at-start' : ''}`,
           linesDecorationsTooltip: change.staged
             ? 'Staged Git change — click to review'
             : 'Unstaged Git change — click to review',
@@ -254,26 +264,17 @@ export function MonacoGitChanges({
     return () => decorations.clear()
   }, [source, changes, enabled])
   useEffect(() => {
-    if (!source || !current) {
+    if (!source || !peekOpen) {
       setZone(null)
       return
     }
-    const height = Math.min(
-      320,
-      Math.max(
-        64,
-        64 +
-          (current.hunk.originalText.split('\n').length +
-            current.hunk.modifiedText.split('\n').length) *
-            source.getOption(editor.EditorOption.lineHeight)
-      )
-    )
+    const height = 320
     const spacer = document.createElement('div')
     const domNode = document.createElement('div')
     domNode.className = 'git-inline-peek'
     domNode.style.height = `${height}px`
     source.getContainerDomNode().appendChild(domNode)
-    const afterLineNumber = Math.min(current.line, source.getModel()?.getLineCount() ?? 1)
+    const afterLineNumber = Math.min(anchorLine, source.getModel()?.getLineCount() ?? 1)
     const position = (): void => {
       domNode.style.top = `${
         source.getTopForLineNumber(afterLineNumber) +
@@ -309,7 +310,6 @@ export function MonacoGitChanges({
       position()
     }
     setZone(domNode)
-    source.revealLineNearTop(afterLineNumber)
     position()
     return () => {
       resizePeek.current = null
@@ -320,7 +320,7 @@ export function MonacoGitChanges({
         source.changeViewZones((accessor) => accessor.removeZone(id))
       }
     }
-  }, [source, current])
+  }, [source, peekOpen, anchorLine])
   const close = (): void => {
     setSelected(null)
     source?.focus()
@@ -359,6 +359,11 @@ export function MonacoGitChanges({
   return createPortal(
     <InlineGitPeek
       hunk={current.hunk}
+      originalContent={current.staged ? snapshot.headContent : snapshot.indexContent}
+      modifiedContent={current.staged ? snapshot.indexContent : buffer}
+      fileId={fileId}
+      filePath={file?.filePath ?? relativePath}
+      worktreeId={file?.worktreeId}
       staged={current.staged}
       language={source?.getModel()?.getLanguageId() ?? 'plaintext'}
       position={selected ?? 0}

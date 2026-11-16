@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { editor } from 'monaco-editor'
+import { createNonSecureContextUuid } from '../../../../../shared/identifiers/non-secure-context-uuid'
+import { editor, Uri, Range } from 'monaco-editor'
+import { monaco } from '@/lib/editor/monaco/monaco-setup'
+import { registerDiffEditorLanguageNavigation } from '../diff/monaco-view/diff-editor-language-navigation'
+import { installIndependentDiffEditorWheelScroll } from '../diff/monaco-view/diff-editor-horizontal-wheel-scroll'
 import { ArrowDown, ArrowUp, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { LoadingSpinner } from '@/components/LoadingSpinner'
@@ -12,6 +16,11 @@ import type { GitInlineHunk } from '../../../../../shared/git/diff/git-inline-hu
 
 export function InlineGitPeek({
   hunk,
+  originalContent,
+  modifiedContent,
+  fileId,
+  filePath,
+  worktreeId,
   staged,
   language,
   position,
@@ -26,6 +35,11 @@ export function InlineGitPeek({
   onHeightChange
 }: {
   hunk: GitInlineHunk
+  originalContent: string
+  modifiedContent: string
+  fileId: string
+  filePath: string
+  worktreeId?: string
   staged: boolean
   language: string
   position: number
@@ -53,9 +67,30 @@ export function InlineGitPeek({
   }, [busy])
   const container = useRef<HTMLDivElement>(null)
   const section = useRef<HTMLElement>(null)
+  const diffRef = useRef<editor.IStandaloneDiffEditor | null>(null)
+  const hunkRef = useRef(hunk)
+  useEffect(() => {
+    hunkRef.current = hunk
+  }, [hunk])
   useEffect(() => {
     section.current?.focus({ preventScroll: true })
   }, [])
+  useEffect(() => {
+    const node = section.current
+    if (!node) {
+      return
+    }
+    // Nested Monaco input must not also move the surrounding file editor.
+    const stop = (event: Event): void => {
+      event.stopPropagation()
+      if (event instanceof KeyboardEvent && event.type === 'keydown' && event.key === 'Escape') {
+        onClose()
+      }
+    }
+    const events = ['keydown', 'keyup', 'keypress', 'wheel', 'mousedown', 'mouseup', 'contextmenu']
+    events.forEach((name) => node.addEventListener(name, stop))
+    return () => events.forEach((name) => node.removeEventListener(name, stop))
+  }, [onClose])
   const theme = useMonacoTheme()
   const typography = useEditorTypography()
   useEffect(() => {
@@ -70,6 +105,8 @@ export function InlineGitPeek({
       renderSideBySide: false,
       automaticLayout: true,
       scrollBeyondLastLine: false,
+      wordWrap: 'off',
+      scrollbar: { vertical: 'auto', horizontal: 'auto', alwaysConsumeMouseWheel: true },
       minimap: { enabled: false },
       renderOverviewRuler: false,
       overviewRulerLanes: 0,
@@ -77,7 +114,7 @@ export function InlineGitPeek({
       diffCodeLens: false,
       renderIndicators: true,
       folding: false,
-      lineNumbers: 'off',
+      lineNumbers: 'on',
       glyphMargin: false,
       stickyScroll: { enabled: false },
       accessibilitySupport: 'on',
@@ -85,9 +122,31 @@ export function InlineGitPeek({
         ? t('dorca.inlineGit.stagedChange', 'Staged Git change')
         : t('dorca.inlineGit.unstagedChange', 'Unstaged Git change')
     })
-    const original = editor.createModel(hunk.originalText, language)
-    const modified = editor.createModel(hunk.modifiedText, language)
+    const identity = createNonSecureContextUuid()
+    const original = editor.createModel(
+      originalContent,
+      language,
+      Uri.file(filePath).with({ scheme: 'dorca-git-peek', query: `${identity}:original` })
+    )
+    const modified = editor.createModel(
+      modifiedContent,
+      language,
+      Uri.file(filePath).with({ scheme: 'dorca-git-peek', query: `${identity}:modified` })
+    )
     diff.setModel({ original, modified })
+    const wheel = installIndependentDiffEditorWheelScroll(diff)
+    diffRef.current = diff
+    const navigation = registerDiffEditorLanguageNavigation(diff, monaco, {
+      fileId,
+      filePath,
+      worktreeId,
+      modifiedIsHistorical: staged,
+      trackHistory: false
+    })
+    const reveal = (): void =>
+      diff
+        .getModifiedEditor()
+        .revealLineInCenter(Math.min(hunkRef.current.lineNumber, modified.getLineCount()))
     const resize = (): void => {
       if (!section.current || !container.current) {
         return
@@ -96,7 +155,14 @@ export function InlineGitPeek({
       onHeightChange?.(Math.min(320, chrome + diff.getModifiedEditor().getContentHeight()))
     }
     const contentSize = diff.getModifiedEditor().onDidContentSizeChange(resize)
-    const updated = diff.onDidUpdateDiff(resize)
+    let initialReveal = true
+    const updated = diff.onDidUpdateDiff(() => {
+      resize()
+      if (initialReveal) {
+        initialReveal = false
+        reveal()
+      }
+    })
     const observer = new ResizeObserver(resize)
     observer.observe(section.current!)
     resize()
@@ -104,11 +170,47 @@ export function InlineGitPeek({
       observer.disconnect()
       contentSize.dispose()
       updated.dispose()
+      navigation()
+      wheel()
+      diffRef.current = null
       diff.dispose()
       original.dispose()
       modified.dispose()
     }
-  }, [hunk, language, theme, typography, t, staged, onHeightChange])
+  }, [
+    originalContent,
+    modifiedContent,
+    fileId,
+    filePath,
+    worktreeId,
+    language,
+    theme,
+    typography,
+    t,
+    staged,
+    onHeightChange
+  ])
+  useEffect(() => {
+    const diff = diffRef.current
+    if (!diff) {
+      return
+    }
+    const modified = diff.getModifiedEditor()
+    const count = modified.getModel()?.getLineCount() ?? 1
+    modified.revealLineInCenter(Math.min(hunk.lineNumber, count))
+    const marker = modified.createDecorationsCollection([
+      {
+        range: new Range(
+          Math.min(hunk.lineNumber, count),
+          1,
+          Math.min(hunk.endLineNumber, count),
+          1
+        ),
+        options: { isWholeLine: true, className: 'git-inline-current-change' }
+      }
+    ])
+    return () => marker.clear()
+  }, [hunk])
   return (
     <section
       ref={section}
@@ -176,6 +278,17 @@ export function InlineGitPeek({
           {error}
         </p>
       )}
+      <p className="px-2 py-1 text-xs text-muted-foreground">
+        {staged
+          ? t(
+              'dorca.inlineGit.stagedNavigation',
+              'Historical definitions are unavailable in the staged comparison.'
+            )
+          : t(
+              'dorca.inlineGit.definitionNotice',
+              'Go to Definition is available on the working-tree side. Historical definitions are unavailable.'
+            )}
+      </p>
       <div ref={container} className="min-h-0 flex-1" />
     </section>
   )

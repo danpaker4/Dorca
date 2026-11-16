@@ -25,11 +25,27 @@ export function seedPrebuiltWindowsNatives() {
   // 1. Workspace addons: @orca/windows-registry and @orca/windows-security
   const workspaceAddons = [
     [
-      join(sourceResources, 'node_modules', '@orca', 'windows-registry', 'build', 'Release', 'orca_windows_registry.node'),
+      join(
+        sourceResources,
+        'node_modules',
+        '@orca',
+        'windows-registry',
+        'build',
+        'Release',
+        'orca_windows_registry.node'
+      ),
       join(repoRoot, 'native', 'windows-registry', 'build', 'Release', 'orca_windows_registry.node')
     ],
     [
-      join(sourceResources, 'node_modules', '@orca', 'windows-security', 'build', 'Release', 'orca_windows_security.node'),
+      join(
+        sourceResources,
+        'node_modules',
+        '@orca',
+        'windows-security',
+        'build',
+        'Release',
+        'orca_windows_security.node'
+      ),
       join(repoRoot, 'native', 'windows-security', 'build', 'Release', 'orca_windows_security.node')
     ]
   ]

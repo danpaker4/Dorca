@@ -9,8 +9,27 @@
 }
 
 .git-inline-deleted {
-  border-color: var(--git-decoration-deleted);
-  border-top: 3px solid var(--git-decoration-deleted);
+  border: 0;
+  overflow: visible;
+}
+
+.git-inline-deleted::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--git-decoration-deleted);
+}
+
+.git-inline-deleted.git-inline-at-start::before {
+  top: 0;
+}
+
+.git-inline-deleted.git-inline-at-end::before {
+  top: auto;
+  bottom: -4px;
 }
 
 .git-inline-staged {
@@ -23,4 +42,8 @@
   z-index: 10;
   height: 320px;
   overflow: hidden;
+}
+
+.git-inline-current-change {
+  outline: 1px solid var(--border);
 }

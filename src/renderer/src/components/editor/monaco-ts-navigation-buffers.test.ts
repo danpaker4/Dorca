@@ -21,6 +21,30 @@ afterEach(() => {
   state.editorBufferKept = {}
 })
 
+it('uses the queried diff buffer instead of another model for the same file', () => {
+  const context: ModelWorkspaceContext = {
+    filePath: '/repo/use.ts',
+    relativePath: 'use.ts',
+    worktreeId: 'workspace',
+    worktreePath: '/repo',
+    readContext: { target: { kind: 'local' }, worktreeId: 'workspace', worktreePath: '/repo' },
+    assertAuthorityCurrent() {}
+  }
+  monaco.editor.createModel('older source buffer', 'typescript', monaco.Uri.file('/repo/use.ts'))
+  const diff = monaco.editor.createModel(
+    'current diff buffer',
+    'typescript',
+    monaco.Uri.parse('dorca-diff:/use.ts')
+  )
+  state.openFiles = [{ filePath: '/repo/use.ts', worktreeId: 'workspace' }]
+  expect(
+    [...captureNavigationBuffers(monaco, context, diff)].map(([model, path]) => [
+      path,
+      model.getValue()
+    ])
+  ).toEqual([['/repo/use.ts', 'current diff buffer']])
+})
+
 it('captures open and retained drafts without taking closed or differently owned models', () => {
   const context: ModelWorkspaceContext = {
     filePath: '/repo/app/source.ts',

@@ -1,6 +1,6 @@
 import { app, shell } from 'electron'
-import { MAIN_RELEASE_REPO } from '../../shared/release-channel'
-import { isValidAppVersion } from '../../shared/app-version'
+import { MAIN_RELEASE_REPO } from '../../shared/updater/release-channel'
+import { isValidAppVersion } from '../../shared/app-lifecycle/identity/app-version'
 
 export function usesDorcaMacManualUpdates(): boolean {
   return process.platform === 'darwin' && app.getName().toLowerCase() === 'dorca'

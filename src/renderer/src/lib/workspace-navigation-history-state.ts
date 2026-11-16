@@ -64,6 +64,9 @@ export function isSameTabTarget(a: NavHistoryEntry, b: NavHistoryEntry): boolean
     return false
   }
   if (a.kind === 'editor' && b.kind === 'editor') {
+    if (a.fileId && b.fileId && a.fileId !== b.fileId) {
+      return false
+    }
     return normalizePath(a.filePath) === normalizePath(b.filePath)
   }
   if (a.kind === 'tab' && b.kind === 'tab') {
@@ -89,7 +92,7 @@ export function pushHistoryEntry(entry: NavHistoryEntry, forceDistinctLine = fal
   if (current) {
     if (forceDistinctLine && current.kind === 'editor' && entry.kind === 'editor') {
       if (
-        normalizePath(current.filePath) === normalizePath(entry.filePath) &&
+        isSameTabTarget(current, entry) &&
         current.lineNumber === entry.lineNumber &&
         current.column === entry.column
       ) {
@@ -130,7 +133,7 @@ export function registerEditorForNavigationHistory(
     const pos = editorInstance.getPosition()
     const stack = getOrCreateStack(worktreeId)
     const current = stack.index >= 0 ? stack.entries[stack.index] : undefined
-    if (current?.kind === 'editor' && normalizePath(current.filePath) === normalizePath(filePath)) {
+    if (current?.kind === 'editor' && current.fileId === fileId) {
       current.fileId = fileId
       if (pos) {
         current.lineNumber = pos.lineNumber
@@ -156,7 +159,7 @@ export function registerEditorForNavigationHistory(
     }
     const stack = getOrCreateStack(worktreeId)
     const current = stack.index >= 0 ? stack.entries[stack.index] : undefined
-    if (current?.kind === 'editor' && normalizePath(current.filePath) === normalizePath(filePath)) {
+    if (current?.kind === 'editor' && current.fileId === fileId) {
       if (Math.abs(e.position.lineNumber - current.lineNumber) >= SAME_FILE_LINE_JUMP_THRESHOLD) {
         pushHistoryEntry(
           {

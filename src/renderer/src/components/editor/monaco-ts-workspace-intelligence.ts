@@ -1,6 +1,7 @@
 import type * as Monaco from 'monaco-editor'
 import { translate } from '@/i18n/i18n'
 import type { editor } from 'monaco-editor'
+import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { findFirstIndexedWorktree as findWorktreeById } from '@/lib/workspace/ownership/worktree-runtime-owner-index'
 import { selectWorktreesByRepo } from '@/store/workspaces/catalog/workspace-record-fields'
@@ -51,9 +52,14 @@ export function registerEditorInstanceForTsWorkspace(
     filePath: string
     worktreeId?: string
     modelOwnerKey?: string
+    historical?: boolean
+    isHistorical?: () => boolean
+    trackHistory?: boolean
   }
 ): () => void {
   const { fileId, filePath, worktreeId, modelOwnerKey } = params
+  const modelUriStr =
+    editorInstance.getModel()?.uri.toString() ?? toEditorModelUri(filePath, modelOwnerKey)
   const state = useAppStore.getState()
   const worktree = worktreeId
     ? findWorktreeById(selectWorktreesByRepo(state), worktreeId)
@@ -63,7 +69,6 @@ export function registerEditorInstanceForTsWorkspace(
     openFile?.relativePath || (worktree ? computeRelativePath(worktree.path, filePath) : filePath)
 
   if (openFile && worktreeId) {
-    const modelUriStr = toEditorModelUri(filePath, modelOwnerKey)
     try {
       const operation = acquireEditorFileOperation(useAppStore.getState, openFile)
       const worktreePath = operation.context.worktreePath
@@ -80,11 +85,18 @@ export function registerEditorInstanceForTsWorkspace(
           connectionId: operation.context.connectionId,
           readContext: operation.context,
           assertAuthorityCurrent: operation.assertAuthorityCurrent,
-          projectRootPath: operation.provenance.childRepo?.path
+          projectRootPath: operation.provenance.childRepo?.path,
+          historical: params.historical,
+          isHistorical: params.isHistorical
         })
         const model = editorInstance.getModel()
         const context = modelContextByUri.get(modelUriStr)
-        if (model && context && TS_WORKSPACE_LANGUAGE_IDS.includes(model.getLanguageId())) {
+        if (
+          model &&
+          context &&
+          !params.historical &&
+          TS_WORKSPACE_LANGUAGE_IDS.includes(model.getLanguageId())
+        ) {
           prepareHostTypeScriptNavigation(context, model, monaco)
         }
       } else {
@@ -95,14 +107,35 @@ export function registerEditorInstanceForTsWorkspace(
     }
   }
 
-  const disposeNavHistory = registerEditorForNavigationHistory(
-    fileId,
-    filePath,
-    resolvedRelativePath,
-    worktreeId,
-    openFile?.runtimeEnvironmentId,
-    editorInstance
-  )
+  const disposeNavHistory =
+    params.trackHistory === false
+      ? () => {}
+      : registerEditorForNavigationHistory(
+          fileId,
+          filePath,
+          resolvedRelativePath,
+          worktreeId,
+          openFile?.runtimeEnvironmentId,
+          editorInstance
+        )
+
+  const definitionAction = editorInstance.addAction({
+    id: 'dorca.goToDefinition',
+    label: translate('dorca.goToDefinition', 'Go to Definition'),
+    keybindings: [monaco.KeyCode.F12],
+    run: (ed) => {
+      if (params.historical || params.isHistorical?.()) {
+        toast.info(
+          translate(
+            'dorca.historicalDefinitionsUnavailable',
+            'Go to Definition is unavailable for historical revisions. Open the working-tree file to navigate current definitions.'
+          )
+        )
+      } else {
+        ed.trigger('dorca', 'editor.action.revealDefinition', null)
+      }
+    }
+  })
 
   const findAllReferencesAction = editorInstance.addAction({
     id: 'dorca.findAllReferences',
@@ -118,5 +151,9 @@ export function registerEditorInstanceForTsWorkspace(
   return () => {
     disposeNavHistory()
     findAllReferencesAction.dispose()
+    definitionAction.dispose()
+    if (modelUriStr !== toEditorModelUri(filePath, modelOwnerKey)) {
+      modelContextByUri.delete(modelUriStr)
+    }
   }
 }

@@ -163,6 +163,13 @@ test('paired Source editor stages hunks on its owning runtime', async ({
       },
       { filePath, worktreeId, environmentId: client.environmentId }
     )
+    await client.page.evaluate(() =>
+      window.__store!.getState().updateSettings({ editorGitBlameMode: 'file' })
+    )
+    await client.page.locator('.git-blame-annotation').first().hover({ timeout: 30000 })
+    const blame = client.page.getByRole('region', { name: 'Git blame details' })
+    await expect(blame.getByLabel('Change preview')).toContainText('ONE')
+    await blame.getByRole('button', { name: 'Close', exact: true }).click()
     await client.page
       .locator('.git-inline-marker:not(.git-inline-staged)')
       .first()

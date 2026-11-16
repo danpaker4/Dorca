@@ -8,6 +8,7 @@ type RuntimeGitCommandName =
   | 'getRuntimeGitHistory'
   | 'getRuntimeGitConflictOperation'
   | 'getRuntimeGitMutationInFlight'
+  | 'readRuntimeWorktreeAtRiskLocalFiles'
   | 'abortRuntimeGitMerge'
   | 'abortRuntimeGitRebase'
   | 'switchRuntimeGitBranch'
@@ -38,6 +39,7 @@ type RuntimeGitCommandName =
   | 'generateRuntimePullRequestFields'
   | 'cancelRuntimeGeneratePullRequestFields'
   | 'getRuntimeGitInlineSnapshot'
+  | 'getRuntimeGitBlame'
   | 'applyRuntimeGitInlineHunk'
   | 'stageRuntimeGitPath'
   | 'resolveRuntimeGitConflict'
@@ -63,6 +65,8 @@ export function installRuntimeGitCommandSurface(
     getRuntimeGitHistory: commands.getRuntimeGitHistory.bind(commands),
     getRuntimeGitConflictOperation: commands.getRuntimeGitConflictOperation.bind(commands),
     getRuntimeGitMutationInFlight: commands.getRuntimeGitMutationInFlight.bind(commands),
+    readRuntimeWorktreeAtRiskLocalFiles:
+      commands.readRuntimeWorktreeAtRiskLocalFiles.bind(commands),
     abortRuntimeGitMerge: commands.abortRuntimeGitMerge.bind(commands),
     abortRuntimeGitRebase: commands.abortRuntimeGitRebase.bind(commands),
     switchRuntimeGitBranch: commands.switchRuntimeGitBranch.bind(commands),
@@ -94,6 +98,7 @@ export function installRuntimeGitCommandSurface(
     cancelRuntimeGeneratePullRequestFields:
       commands.cancelRuntimeGeneratePullRequestFields.bind(commands),
     getRuntimeGitInlineSnapshot: commands.getRuntimeGitInlineSnapshot.bind(commands),
+    getRuntimeGitBlame: commands.getRuntimeGitBlame.bind(commands),
     applyRuntimeGitInlineHunk: commands.applyRuntimeGitInlineHunk.bind(commands),
     stageRuntimeGitPath: commands.stageRuntimeGitPath.bind(commands),
     resolveRuntimeGitConflict: commands.resolveRuntimeGitConflict.bind(commands),

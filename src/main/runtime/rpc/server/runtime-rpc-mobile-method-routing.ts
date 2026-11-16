@@ -89,6 +89,7 @@ export const EXECUTION_HOST_METHODS = [
   'git.commitDiff',
   'git.completeMerge',
   'git.diff',
+  'git.blame',
   'git.discard',
   'git.discoverCommitMessageModels',
   'git.fastForward',

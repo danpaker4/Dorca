@@ -28,7 +28,7 @@ import { installMonacoDelayerCancellationGuard } from './monaco-delayer-cancella
 import { installMonacoDiffEditorDisposalGuard } from './monaco-diff-editor-disposal'
 import { installMonacoDiffViewportTokenization } from './monaco-diff-viewport-tokenization'
 import { installMonacoPeekReferencesPreviewOptions } from './monaco-peek-preview-options'
-import { installMonacoContextMenuPaste } from '@/components/editor/install-monaco-context-menu-paste'
+import { installMonacoContextMenuPaste } from '@/components/editor/monaco/install-monaco-context-menu-paste'
 import { installMonacoTypeScriptWorkspaceIntelligence } from '@/components/editor/monaco-ts-workspace-intelligence'
 import { runMonacoSetupSteps } from './monaco-setup-steps'
 import { installMonacoTsWorkerIdleStop } from './monaco-ts-worker-idle-stop'

@@ -8,12 +8,15 @@ import {
   type GitInlineSnapshot
 } from '../../../shared/git/diff/git-inline-hunks'
 import { resolveWorktreeHostPath } from '../../../shared/git/metadata/git-metadata-path'
-import { parseWslUncPath, toLinuxPath } from '../../../shared/wsl-paths'
+import { parseWslUncPath, toLinuxPath } from '../../../shared/file-access/wsl-paths'
 import { isBinaryBuffer } from '../../../shared/file-preview/binary-buffer'
-import { gitOptionsForWorktree, type GitRuntimeOptions } from '../git-runtime-options'
+import {
+  gitOptionsForWorktree,
+  type GitRuntimeOptions
+} from '../command-runner/git-runtime-options'
 import { gitExecFileAsync } from '../command-runner/git-exec-file'
 import { gitOptionalLocksDisabledEnv } from '../command-runner/git-environment/git-process-env'
-import { checkIgnoredPaths } from './check-ignored-paths'
+import { checkIgnoredPaths } from './ignores/check-ignored-paths'
 import { literalPathspec } from './git-pathspec'
 import { invalidateGitReadCaches } from './git-read-cache-invalidation'
 import { inlineIndexPath, readIndex } from './inline-hunk-index'

@@ -1,11 +1,11 @@
 import { access } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { getAppEnvironment, hasAppEnvironment } from '../../shared/app-environment'
+import { getAppEnvironment, hasAppEnvironment } from '../../shared/app-lifecycle/app-environment'
 import {
   TYPESCRIPT_LANGUAGE_SERVER_DIRECTORY,
   typeScriptLanguageServerBinary
-} from '../../shared/orcad-artifacts'
+} from '../../shared/remote-runtime/orcad-distribution/orcad-artifacts'
 
 export async function resolveTypeScriptServerBinary(): Promise<string | null> {
   const name = typeScriptLanguageServerBinary(process.platform)

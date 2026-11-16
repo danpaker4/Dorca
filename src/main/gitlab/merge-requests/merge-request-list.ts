@@ -3,7 +3,7 @@ import type {
   ListMergeRequestsResult,
   MRListState
 } from '../../../shared/gitlab-types'
-import type { IssueSourcePreference } from '../../../shared/repo-types'
+import type { IssueSourcePreference } from '../../../shared/repository/repo-types'
 import { mapMRToWorkItem } from '../requests/gitlab-response-mapping'
 import { acquire, glabApiWithHeaders, release } from '../requests/glab-request-admission'
 import { classifyListFetchError } from '../requests/glab-error-classification'
@@ -14,7 +14,7 @@ import { parseGlabJsonList, parseGlabPaginationHeader } from '../requests/glab-a
 import { resolveIssueSource } from '../issues/gitlab-issue-source-resolution'
 import { encodedProject } from '../projects/project-path-encoding'
 import { readGlabViewer } from '../requests/gitlab-auth-and-rate-limit'
-import { isTaskRepositoryIneligible } from '../../git/task-repository-eligibility'
+import { isTaskRepositoryIneligible } from '../../git/remotes/task-repository-eligibility'
 
 const INVOLVEMENT_PARAM: Record<GitLabMRInvolvement, string> = {
   authored: 'author_id',

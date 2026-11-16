@@ -11,7 +11,7 @@ const native = createRequire(compiler).resolve(
 const libraries = readdirSync(join(dirname(native), 'lib'))
   .filter((name) => /^lib.*\.d\.ts$/.test(name))
   .sort()
-const file = join(root, 'src/shared/orcad-artifacts.ts')
+const file = join(root, 'src/shared/remote-runtime/orcad-distribution/orcad-artifacts.ts')
 const source = readFileSync(file, 'utf8')
 const lines = []
 for (let index = 0; index < libraries.length; index += 6) {

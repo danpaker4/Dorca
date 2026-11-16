@@ -85,6 +85,8 @@ const hoverCardContentVariants = cva('', {
   variants: {
     variant: {
       default: 'w-64 p-4',
+      'git-blame':
+        'w-120 max-w-[min(calc(100vw-1rem),var(--radix-hover-card-content-available-width))] max-h-[min(70vh,var(--radix-hover-card-content-available-height))] overflow-auto p-3 text-xs scrollbar-sleek',
       'workspace-details':
         'w-[360px] max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto p-3 text-xs scrollbar-sleek'
     }

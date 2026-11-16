@@ -19,6 +19,8 @@ export type ModelWorkspaceContext = {
   readContext: RuntimeFileOperationArgs
   assertAuthorityCurrent: () => void
   projectRootPath?: string
+  historical?: boolean
+  isHistorical?: () => boolean
 }
 
 export const modelContextByUri = new Map<string, ModelWorkspaceContext>()

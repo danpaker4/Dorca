@@ -1,6 +1,6 @@
 import type { ClassifiedError } from '../../../shared/classified-error'
 import type { GitLabCommentResult, GitLabIssueInfo, MRComment } from '../../../shared/gitlab-types'
-import type { IssueSourcePreference } from '../../../shared/repo-types'
+import type { IssueSourcePreference } from '../../../shared/repository/repo-types'
 import { mapGitLabIssueInfo } from '../requests/gitlab-response-mapping'
 // prettier-ignore
 import { glabApiWithHeaders, acquire, release } from '../requests/glab-request-admission'
@@ -12,7 +12,7 @@ import { glabRepoExecOptions, glabHostnameArgs } from '../projects/gitlab-projec
 import { parseGlabJsonList, parseGlabPaginationHeader } from '../requests/glab-api-response'
 import type { ProjectRef } from '../projects/project-ref-parser'
 import { encodedProject } from '../projects/project-path-encoding'
-import { isTaskRepositoryIneligible } from '../../git/task-repository-eligibility'
+import { isTaskRepositoryIneligible } from '../../git/remotes/task-repository-eligibility'
 import { codeHostFailure, classifiedFailure } from '../../../shared/code-host-failure-copy'
 
 // Distinguish a confirmed empty list from fetch failure.

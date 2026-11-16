@@ -40,6 +40,7 @@ export function registerWorkspaceEditorOpener(monaco: typeof Monaco): void {
           recordExplicitEditorJump({
             worktreeId: sourceCtx.worktreeId,
             source: {
+              fileId: sourceCtx.fileId,
               filePath: sourceCtx.filePath,
               relativePath: sourceCtx.relativePath,
               runtimeEnvironmentId: sourceCtx.runtimeEnvironmentId,
@@ -74,6 +75,12 @@ export function registerWorkspaceEditorOpener(monaco: typeof Monaco): void {
       const state = useAppStore.getState()
       // Opening the target publishes its initial cursor before the explicit jump is recorded.
       suppressWorkspaceHistoryRecording()
+      if (
+        sourceCtx?.fileId &&
+        state.openFiles.find((file) => file.id === sourceCtx.fileId)?.mode === 'diff'
+      ) {
+        state.makePreviewFilePermanent?.(sourceCtx.fileId)
+      }
       state.openFile(
         {
           filePath: targetFilePath,
@@ -99,6 +106,7 @@ export function registerWorkspaceEditorOpener(monaco: typeof Monaco): void {
         worktreeId: targetCtx.worktreeId,
         source: sourceCtx
           ? {
+              fileId: sourceCtx.fileId,
               filePath: sourceCtx.filePath,
               relativePath: sourceCtx.relativePath,
               runtimeEnvironmentId: sourceCtx.runtimeEnvironmentId,

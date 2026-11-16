@@ -1,5 +1,5 @@
 import { defineMethod } from '../../core'
-import { FileTypeScriptNavigation } from '../../../../../shared/rpc-contract/files-params'
+import { FileTypeScriptNavigation } from '../../../../../shared/rpc-contract/filesystem/files-params'
 
 export const FILE_TYPESCRIPT_NAVIGATION_METHODS = [
   defineMethod({

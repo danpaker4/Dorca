@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process'
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { createDorcaMacManifest } from './dorca-mac-assets.mjs'
+import { DORCA_WINDOWS_ONLY_RELEASE_MARKER } from './dorca-release-plan.mjs'
 
 const REPO = 'danpaker4/Dorca'
 const run = (args) => execFileSync('gh', args, { encoding: 'utf8' }).trim()
@@ -33,7 +34,11 @@ const version = tag.slice(1)
 
 if (process.argv[2] === 'plan') {
   const required = ['dorca-macos-x64.dmg', 'dorca-macos-arm64.dmg', 'latest-mac.yml']
-  const needed = !required.every((name) => release.assets.some((asset) => asset.name === name))
+  const windowsOnly =
+    process.env.DORCA_MAC_AUTOMATIC === '1' &&
+    (release.body || '').includes(DORCA_WINDOWS_ONLY_RELEASE_MARKER)
+  const needed =
+    !windowsOnly && !required.every((name) => release.assets.some((asset) => asset.name === name))
   if (needed) {
     run([
       'api',
@@ -44,7 +49,11 @@ if (process.argv[2] === 'plan') {
   }
   appendFileSync(process.env.GITHUB_OUTPUT, `needed=${needed}\ntag=${tag}\nversion=${version}\n`)
   console.log(
-    needed ? `Building Mac installers for ${tag}` : `${tag} already includes Mac installers`
+    windowsOnly
+      ? `${tag} is Windows-only; skipping automatic Mac installers`
+      : needed
+        ? `Building Mac installers for ${tag}`
+        : `${tag} already includes Mac installers`
   )
 } else if (process.argv[2] === 'publish') {
   const descriptions = ['x64', 'arm64'].map((arch) =>

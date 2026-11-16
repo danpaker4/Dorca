@@ -6,7 +6,7 @@ import { selectWorkspaceByHostTarget } from '@/store/workspaces/selection/worksp
 import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
 import type { ExecutionHostId } from '../../../../../shared/execution-host'
 import type { RuntimeGitContext } from '@/runtime/source-control/git/runtime-git-client-context'
-import { BoundedMap } from '../../../../../shared/bounded-map'
+import { BoundedMap } from '../../../../../shared/collections/bounded-map'
 
 export type InlineGitContext = RuntimeGitContext & { worktreeId: string; hostId: ExecutionHostId }
 const contexts = new BoundedMap<string, InlineGitContext>({ maxEntries: 64 })

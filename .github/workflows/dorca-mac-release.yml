@@ -52,6 +52,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           DORCA_MAC_TAG: ${{ inputs.tag }}
+          DORCA_MAC_AUTOMATIC: ${{ github.event_name == 'workflow_run' && '1' || '0' }}
         run: node config/scripts/dorca-mac-release.mjs plan
 
   build:

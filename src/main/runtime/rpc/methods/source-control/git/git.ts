@@ -1,7 +1,8 @@
+import { GIT_BLAME_METHODS } from './git-blame-methods'
 import {
   remoteRpcContentBudget,
   remoteRpcResultExceedsContentBudget
-} from '../../../../../../shared/remote-rpc-content-budget'
+} from '../../../../../../shared/remote-runtime/rpc/remote-rpc-content-budget'
 import { GIT_STATUS_METHODS } from './git-status-methods'
 import { GIT_COMMIT_ACTION_METHODS } from './git-commit-action-methods'
 import { defineMethod } from '../../../core'
@@ -28,9 +29,10 @@ import {
   GitRemoteFileUrl,
   GitTargetedRemote,
   WorktreeSelector
-} from '../../../../../../shared/rpc-contract/git-params'
+} from '../../../../../../shared/rpc-contract/source-control/git-params'
 
 export const GIT_METHODS = [
+  ...GIT_BLAME_METHODS,
   defineMethod({
     name: 'git.inlineSnapshot',
     permission: 'workspace',

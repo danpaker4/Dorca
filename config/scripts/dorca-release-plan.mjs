@@ -1,4 +1,5 @@
 const STABLE_VERSION = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+export const DORCA_WINDOWS_ONLY_RELEASE_MARKER = '<!-- dorca-platforms:windows -->'
 
 export function parseStableVersion(version) {
   if (typeof version !== 'string' || !STABLE_VERSION.test(version)) {

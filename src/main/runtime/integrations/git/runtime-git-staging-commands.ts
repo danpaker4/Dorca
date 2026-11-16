@@ -8,6 +8,9 @@ import {
   type RuntimeGitCommandHost
 } from './runtime-git-command-target'
 import { assertRuntimeReadWslDistroRunning } from './runtime-wsl-background-read-gate'
+import { queryGitBlame } from '../../../git/source-control/blame/git-blame-query'
+import type { GitBlameRequest, GitBlameResult } from '../../../../shared/git/blame/git-blame'
+import { BoundedMap } from '../../../../shared/collections/bounded-map'
 import type { ConflictResolution } from '../../../../shared/source-control/listing/source-control-entry-actions'
 
 import { getGitInlineSnapshot, applyGitInlineHunk } from '../../../git/source-control/inline-hunks'
@@ -18,7 +21,52 @@ import type {
 } from '../../../../shared/git/diff/git-inline-hunks'
 
 export class RuntimeGitStagingCommands {
+  private readonly blameRequests = new BoundedMap<
+    string,
+    { sequence: number; abort: AbortController }
+  >({
+    maxEntries: 64,
+    onEvict: (request) => request.abort.abort()
+  })
+
   constructor(private readonly host: RuntimeGitCommandHost) {}
+
+  async getRuntimeGitBlame(
+    worktreeSelector: string,
+    request: GitBlameRequest,
+    client: string,
+    signal?: AbortSignal
+  ): Promise<GitBlameResult> {
+    const key = JSON.stringify([client, request.channel])
+    const previous = this.blameRequests.get(key)
+    if (previous && previous.sequence >= request.sequence) {
+      return {}
+    }
+    previous?.abort.abort()
+    const abort = new AbortController()
+    this.blameRequests.set(key, { sequence: request.sequence, abort })
+    if (request.mode === 'cancel') {
+      return {}
+    }
+    const combined = AbortSignal.any([
+      abort.signal,
+      AbortSignal.timeout(15000),
+      ...(signal ? [signal] : [])
+    ])
+    const target = await (this.host.resolveRuntimeInlineGitTarget?.(worktreeSelector) ??
+      this.host.resolveRuntimeGitTarget(worktreeSelector))
+    requireReachableGitRoute(target.executionHostId)
+    await assertRuntimeReadWslDistroRunning(target, target.localGitOptions?.wslDistro)
+    combined.throwIfAborted()
+    return queryGitBlame(
+      target.worktree.path,
+      {
+        ...request,
+        filePath: normalizeRuntimeGitRelativePath(request.filePath)
+      },
+      { ...target.localGitOptions, signal: combined, admissionTier: 'background' }
+    )
+  }
 
   async getRuntimeGitInlineSnapshot(
     worktreeSelector: string,
