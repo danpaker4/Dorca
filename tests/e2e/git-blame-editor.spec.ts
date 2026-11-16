@@ -139,11 +139,12 @@ test('blame reviews uncommitted lines and their history while peek scrolls throu
     { timeout: 60000 }
   )
   await expect(card.filter({ hasText: 'Uncommitted changes' })).not.toBeVisible()
+  await orcaPage.setViewportSize({ width: 1280, height: 900 })
   await orcaPage.locator('.git-blame-annotation').first().hover()
   await card.getByRole('button', { name: 'Open Changes' }).click()
   const commitDiff = orcaPage.locator('.monaco-diff-editor')
-  await expect(commitDiff.locator('.monaco-editor').first()).toContainText('first = 1')
-  await expect(commitDiff.locator('.monaco-editor').last()).toContainText('first = 10')
+  await expect(commitDiff.locator('.monaco-editor[data-uri]').first()).toContainText('first = 1')
+  await expect(commitDiff.locator('.monaco-editor[data-uri]').last()).toContainText('first = 10')
   expect(
     await electronApp.evaluate(({ BrowserWindow }) =>
       BrowserWindow.getAllWindows().some((window) => window.isVisible())
