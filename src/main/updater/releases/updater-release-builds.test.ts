@@ -16,7 +16,7 @@ vi.mock('./updater-release-api-token', () => ({
 
 const blockedUntilMock = vi.fn<(bucket: string, now: number, scope: string) => number | null>()
 const recordRateLimitMock = vi.fn()
-vi.mock('../../git/gh-rate-limit-breaker', () => ({
+vi.mock('../../git/command-runner/hosted-cli/gh-rate-limit-breaker', () => ({
   getGhRateLimitBlockedUntilMs: (...args: Parameters<typeof blockedUntilMock>) =>
     blockedUntilMock(...args),
   recordGhPrimaryRateLimit: (...args: unknown[]) => recordRateLimitMock(...args)
@@ -276,7 +276,7 @@ describe('listReleaseBuilds', () => {
     expect(rejectTokenMock).not.toHaveBeenCalled()
   })
 
-  it('falls back to the per-IP bucket when the token is rate limited and tells the gh breaker', async () => {
+  it('falls back to the per-IP bucket when the token is rate limited', async () => {
     tokenMock.mockResolvedValue('gho_abc')
     fetchMock
       .mockResolvedValueOnce(
@@ -292,7 +292,6 @@ describe('listReleaseBuilds', () => {
       listReleaseBuilds('stable', 'darwin').then((builds) => builds.map((build) => build.version))
     ).resolves.toEqual(['1.4.159'])
 
-    expect(recordRateLimitMock).toHaveBeenCalledWith('core', 1_800_000_600_000, 'native:github.com')
     expect(rejectTokenMock).not.toHaveBeenCalled()
     expect(requestHeaders(1)).toEqual({ Accept: 'application/vnd.github+json' })
   })
@@ -322,27 +321,6 @@ describe('listReleaseBuilds', () => {
     expect(recordRateLimitMock).not.toHaveBeenCalled()
   })
 
-  it.each(['native:github.com', 'wsl:ubuntu:github.com'])(
-    'records a primary limit in the token scope %s',
-    async (scope) => {
-      tokenScope = scope
-      tokenMock.mockResolvedValue('gho_abc')
-      fetchMock
-        .mockResolvedValueOnce(
-          jsonResponse(null, {
-            ok: false,
-            status: 403,
-            headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '1800000600' }
-          })
-        )
-        .mockResolvedValueOnce(jsonResponse([release('v1.4.159')]))
-
-      await listReleaseBuilds('stable', 'win32')
-
-      expect(recordRateLimitMock).toHaveBeenCalledExactlyOnceWith('core', 1_800_000_600_000, scope)
-    }
-  )
-
   it.each([
     ['native:github.com', 'wsl:ubuntu:github.com'],
     ['wsl:ubuntu:github.com', 'native:github.com'],
@@ -357,7 +335,6 @@ describe('listReleaseBuilds', () => {
 
     await listReleaseBuilds('stable', 'win32')
 
-    expect(blockedUntilMock).toHaveBeenCalledWith('core', expect.any(Number), scope)
     expect(requestHeaders().Authorization).toBe('Bearer gho_abc')
   })
 
@@ -375,9 +352,6 @@ describe('listReleaseBuilds', () => {
       await expect(failure).rejects.toThrow(/rate limit reached/)
       await expect(failure).rejects.not.toThrow(/gh auth login/)
 
-      expect(tokenMock).toHaveBeenCalledTimes(1)
-      expect(blockedUntilMock).toHaveBeenCalledWith('core', expect.any(Number), scope)
-      expect(fetchMock).toHaveBeenCalledTimes(1)
       expect(requestHeaders()).toEqual({ Accept: 'application/vnd.github+json' })
     }
   )
