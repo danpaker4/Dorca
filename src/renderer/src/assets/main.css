@@ -2080,7 +2080,7 @@ html.native-shell .app-layout {
   opacity: 0.7;
   cursor: pointer;
   font-style: italic;
-  padding-left: 3em;
+  margin-left: 3em;
   white-space: pre;
   overflow: hidden;
   text-overflow: ellipsis;

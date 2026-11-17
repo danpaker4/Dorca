@@ -31,7 +31,6 @@ export function MonacoDiffGitBlame({
         fileId={fileId}
         relativePath={originalRelativePath}
         revision={originalRevision}
-        mode="file"
         enabled={sideBySide && originalContent.length > 0}
       />
       <MonacoGitBlame
@@ -39,7 +38,6 @@ export function MonacoDiffGitBlame({
         fileId={fileId}
         relativePath={relativePath}
         revision={modifiedRevision}
-        mode="file"
         enabled={modifiedContent.length > 0}
       />
     </>
