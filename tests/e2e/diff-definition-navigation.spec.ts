@@ -1,8 +1,8 @@
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { Locator } from '@stablyai/playwright-test'
+import { expect, type Locator } from '@stablyai/playwright-test'
 import { runProcess } from '@orca/process-host'
-import { test, expect } from './desktop/electron-fixtures/orca-app'
+import { test } from './desktop/electron-fixtures/orca-app'
 import {
   activateGoldenWorktree,
   cleanupGoldenWorktree,

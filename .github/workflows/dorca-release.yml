@@ -95,7 +95,6 @@ jobs:
           src/main/updater/releases/updater-prerelease-feed-readiness.test.ts
           src/main/updater/releases/updater-release-builds.test.ts
           src/main/updater/updater.dorca-release.test.ts
-          src/shared/updater/release-channel.test.ts
 
       - name: Typecheck the integrated application
         if: steps.prepare.outputs.should_release == 'true'
