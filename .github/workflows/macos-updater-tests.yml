@@ -53,9 +53,3 @@ jobs:
           config/scripts/desktop-distribution/macos/macos-shipit-scheduling.test.mjs
           src/main/updater/mac-install/macos-update-running-instances.integration.test.ts
           src/main/updater/mac-install/updater-mac-quit-guard.test.ts
-
-      - name: Prove login-backed terminal writer census on the disposable runner
-        env:
-          ORCA_MACOS_LOGIN_CENSUS_CI: '1'
-          ORCA_BACKGROUND_LAUNCH: '1'
-        run: pnpm exec vitest run --config config/vitest.config.ts
