@@ -9,8 +9,8 @@ import {
   throwIfSignalAborted,
   waitForPromiseWithSignal
 } from '../../../../shared/concurrency/abort-signal-reason'
-import { listQuickOpenFiles } from '../../../ipc/filesystem/filesystem-list-files'
-import { searchQuickOpenFilePaths as searchHostQuickOpenFilePaths } from '../../../ipc/filesystem/filesystem-search-file-paths'
+import { listQuickOpenFiles } from '../../../ipc/filesystem/search/filesystem-list-files'
+import { searchQuickOpenFilePaths as searchHostQuickOpenFilePaths } from '../../../ipc/filesystem/search/filesystem-search-file-paths'
 import { isMobileBinaryPath, isSafeMobileRelativePath } from '../mobile-file-kind'
 import {
   requireRuntimeFileProvider,
@@ -24,7 +24,7 @@ import type {
   TypeScriptNavigationRequest,
   TypeScriptNavigationResult
 } from '../../../../shared/editor-language/typescript-navigation'
-import { isPathInsideOrEqual } from '../../../../shared/cross-platform-path'
+import { isPathInsideOrEqual } from '../../../../shared/file-access/cross-platform-path'
 import { resolveRuntimeAuthorizedPath } from '../chat-scratch-file-root'
 import {
   authorizeTypeScriptNavigation,

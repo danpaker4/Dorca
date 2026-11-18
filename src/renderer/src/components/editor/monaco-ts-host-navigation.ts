@@ -11,7 +11,8 @@ import { captureNavigationBuffers } from './monaco-ts-navigation-buffers'
 
 export async function queryHostTypeScriptNavigation(
   ctx: ModelWorkspaceContext,
-  request: TypeScriptNavigationRequest
+  request: TypeScriptNavigationRequest,
+  signal?: AbortSignal
 ): Promise<TypeScriptNavigationResult | null> {
   ctx.assertAuthorityCurrent()
   const target = ctx.readContext.target
@@ -27,6 +28,7 @@ export async function queryHostTypeScriptNavigation(
         },
         {
           timeoutMs: 30_000,
+          signal,
           expectedEnvironmentPairingRevision: ctx.readContext.expectedEnvironmentPairingRevision
         }
       )
@@ -52,17 +54,46 @@ export function prepareHostTypeScriptNavigation(
   model: Monaco.editor.ITextModel,
   monaco: Pick<typeof Monaco, 'editor' | 'Uri'>
 ): void {
-  void queryHostTypeScriptNavigation(ctx, {
-    rootPath: ctx.projectRootPath ?? ctx.worktreePath,
-    filePath: ctx.filePath,
-    kind: 'prepare',
-    lineNumber: 1,
-    column: 1,
-    includeDeclaration: false,
-    buffers: [...captureNavigationBuffers(monaco, ctx, model)].map(([buffer, filePath]) => ({
-      filePath,
-      content: buffer.getValue(),
-      languageId: buffer.getLanguageId()
-    }))
-  }).catch(() => undefined)
+  void queryHostTypeScriptDocument(monaco, ctx, model, 'prepare').catch(() => undefined)
+}
+
+export async function queryHostTypeScriptDocument(
+  monaco: Pick<typeof Monaco, 'editor' | 'Uri'>,
+  ctx: ModelWorkspaceContext,
+  model: Monaco.editor.ITextModel,
+  kind: 'prepare' | 'hover' | 'diagnostics',
+  position?: Monaco.IPosition,
+  signal?: AbortSignal
+): Promise<TypeScriptNavigationResult | null> {
+  if (ctx.connectionId || signal?.aborted) {
+    return null
+  }
+  const buffers = [...captureNavigationBuffers(monaco, ctx, model)]
+  const versions = buffers.map(([buffer]) => buffer.getVersionId())
+  const result = await queryHostTypeScriptNavigation(
+    ctx,
+    {
+      rootPath: ctx.projectRootPath ?? ctx.worktreePath,
+      filePath: ctx.filePath,
+      kind,
+      lineNumber: position?.lineNumber ?? 1,
+      column: position?.column ?? 1,
+      includeDeclaration: false,
+      buffers: buffers.map(([buffer, filePath]) => ({
+        filePath,
+        content: buffer.getValue(),
+        languageId: buffer.getLanguageId()
+      }))
+    },
+    signal
+  )
+  if (
+    signal?.aborted ||
+    buffers.some(
+      ([buffer], index) => buffer.isDisposed() || buffer.getVersionId() !== versions[index]
+    )
+  ) {
+    return null
+  }
+  return result
 }

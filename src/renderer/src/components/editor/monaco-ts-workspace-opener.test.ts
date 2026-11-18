@@ -36,8 +36,10 @@ vi.mock('@/store', () => ({
     subscribe: (listener: (state: NavigationState) => void) => holder.store!.subscribe(listener)
   }
 }))
-vi.mock('@/components/terminal-workspace-model', () => ({ getKeybindingContext: () => 'editor' }))
-vi.mock('@/hooks/ipc-tab-switch', () => ({ activateCyclableTab: vi.fn() }))
+vi.mock('@/components/terminal/workbench/terminal-workspace-model', () => ({
+  getKeybindingContext: () => 'editor'
+}))
+vi.mock('@/lib/workspace/tabs/ipc-tab-switch', () => ({ activateCyclableTab: vi.fn() }))
 
 afterEach(() => {
   modelContextByUri.clear()

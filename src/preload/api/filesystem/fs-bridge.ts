@@ -35,7 +35,7 @@ import type {
   LocalLogTailReadArgs,
   LocalLogTailReadResult,
   LocalLogTailWatchArgs
-} from '../../../shared/local-log-tail-types'
+} from '../../../shared/file-content/local-log-tail-types'
 import type { PreloadApi } from '../../api-types'
 
 export const fsApi = {

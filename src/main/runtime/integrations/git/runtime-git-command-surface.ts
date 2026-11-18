@@ -39,7 +39,7 @@ type RuntimeGitCommandName =
   | 'generateRuntimePullRequestFields'
   | 'cancelRuntimeGeneratePullRequestFields'
   | 'getRuntimeGitInlineSnapshot'
-  | 'getRuntimeGitBlame'
+  | 'getRuntimeGitStatusBarBlame'
   | 'applyRuntimeGitInlineHunk'
   | 'stageRuntimeGitPath'
   | 'resolveRuntimeGitConflict'
@@ -50,6 +50,7 @@ type RuntimeGitCommandName =
   | 'discardRuntimeGitPath'
   | 'getRuntimeGitRemoteFileUrl'
   | 'getRuntimeGitRemoteCommitUrl'
+  | 'getRuntimeGitBlame'
 
 export type RuntimeGitCommandSurface = Pick<RuntimeGitCommands, RuntimeGitCommandName>
 
@@ -98,7 +99,7 @@ export function installRuntimeGitCommandSurface(
     cancelRuntimeGeneratePullRequestFields:
       commands.cancelRuntimeGeneratePullRequestFields.bind(commands),
     getRuntimeGitInlineSnapshot: commands.getRuntimeGitInlineSnapshot.bind(commands),
-    getRuntimeGitBlame: commands.getRuntimeGitBlame.bind(commands),
+    getRuntimeGitStatusBarBlame: commands.getRuntimeGitStatusBarBlame.bind(commands),
     applyRuntimeGitInlineHunk: commands.applyRuntimeGitInlineHunk.bind(commands),
     stageRuntimeGitPath: commands.stageRuntimeGitPath.bind(commands),
     resolveRuntimeGitConflict: commands.resolveRuntimeGitConflict.bind(commands),
@@ -108,6 +109,7 @@ export function installRuntimeGitCommandSurface(
     bulkDiscardRuntimeGitPaths: commands.bulkDiscardRuntimeGitPaths.bind(commands),
     discardRuntimeGitPath: commands.discardRuntimeGitPath.bind(commands),
     getRuntimeGitRemoteFileUrl: commands.getRuntimeGitRemoteFileUrl.bind(commands),
-    getRuntimeGitRemoteCommitUrl: commands.getRuntimeGitRemoteCommitUrl.bind(commands)
+    getRuntimeGitRemoteCommitUrl: commands.getRuntimeGitRemoteCommitUrl.bind(commands),
+    getRuntimeGitBlame: commands.getRuntimeGitBlame.bind(commands)
   } satisfies RuntimeGitCommandSurface)
 }

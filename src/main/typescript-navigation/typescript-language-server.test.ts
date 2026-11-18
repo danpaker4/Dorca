@@ -4,7 +4,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, relative } from 'node:path'
 import { TypeScriptLanguageServer } from './typescript-language-server'
-import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
+import { isPathInsideOrEqual } from '../../shared/file-access/cross-platform-path'
 import {
   TYPESCRIPT_LANGUAGE_SERVER_DIRECTORY,
   typeScriptLanguageServerBinary
@@ -169,4 +169,29 @@ it('updates cached definition targets after an on-disk reexport changes', async 
       range: { startLineNumber: 1, startColumn: 14, endLineNumber: 1, endColumn: 20 }
     }
   ])
+})
+
+it('returns the imported type and reports errors in the current unsaved buffer', async () => {
+  const filePath = join(root, 'use.ts')
+  const buffers = [
+    {
+      filePath,
+      content: `${source}\nconst bad: number = "wrong"`,
+      languageId: 'typescript'
+    }
+  ]
+  const [diagnostics, hover] = await Promise.all([
+    server.query({ ...request(), kind: 'diagnostics', buffers }),
+    server.query({ ...request(), kind: 'hover', buffers })
+  ])
+
+  expect(hover.hover?.markdown).toContain('constructor Server(): Renamed')
+  expect(diagnostics.errors).toEqual([
+    {
+      code: '2322',
+      message: "Type 'string' is not assignable to type 'number'.",
+      range: { startLineNumber: 3, startColumn: 7, endLineNumber: 3, endColumn: 10 }
+    }
+  ])
+  expect((await server.query({ ...request(), kind: 'diagnostics' })).errors).toEqual([])
 })

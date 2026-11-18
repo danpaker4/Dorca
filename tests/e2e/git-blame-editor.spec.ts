@@ -1,13 +1,13 @@
 import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { runProcess } from '@orca/process-host'
-import { test, expect } from './helpers/orca-app'
+import { test, expect } from './desktop/electron-fixtures/orca-app'
 import {
   activateGoldenWorktree,
   cleanupGoldenWorktree,
   createGoldenWorktree
-} from './helpers/golden-source-control'
-import { waitForSessionReady } from './helpers/store'
+} from './golden-journeys/golden-source-control'
+import { waitForSessionReady } from './desktop/renderer-probes/store'
 
 test('blame reviews uncommitted lines and their history while peek scrolls through the full file', async ({
   orcaPage,

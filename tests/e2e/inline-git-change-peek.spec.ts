@@ -1,17 +1,17 @@
 import { readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { runProcess } from '@orca/process-host'
-import { test, expect } from './helpers/orca-app'
+import { test, expect } from './desktop/electron-fixtures/orca-app'
 import {
   activateGoldenWorktree,
   cleanupGoldenWorktree,
   createGoldenWorktree
-} from './helpers/golden-source-control'
-import { waitForSessionReady } from './helpers/store'
+} from './golden-journeys/golden-source-control'
+import { waitForSessionReady } from './desktop/renderer-probes/store'
 import {
   createRuntimeDesktopPairingOffer,
   launchPairedElectronClient
-} from './helpers/paired-electron-client'
+} from './remote/paired-runtime/client-hosts/paired-electron-client'
 
 test('inline Git peek stages one change and reverts through editor undo', async ({
   orcaPage,

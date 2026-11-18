@@ -1,5 +1,5 @@
 import { useAppStore } from '@/store'
-import { getKeybindingContext } from '@/components/terminal-workspace-model'
+import { getKeybindingContext } from '@/components/terminal/workbench/terminal-workspace-model'
 import { addAppKeyListener, removeAppKeyListener } from './keyboard/app-keyboard-router'
 import {
   applyHistoryEntry,

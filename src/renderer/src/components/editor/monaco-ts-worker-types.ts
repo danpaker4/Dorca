@@ -1,3 +1,10 @@
+declare module 'monaco-editor/esm/vs/language/typescript/tsMode.js' {
+  import type { languages, typescript } from 'monaco-editor'
+  export const QuickInfoAdapter: new (
+    worker: Awaited<ReturnType<typeof typescript.getTypeScriptWorker>>
+  ) => languages.HoverProvider
+}
+
 declare module 'monaco-editor/esm/vs/editor/editor.worker.start.js' {
   export function start(create: () => object): void
 }

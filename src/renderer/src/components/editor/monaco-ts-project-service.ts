@@ -2,7 +2,7 @@ import { queryProjectLocations } from './monaco-ts-project-locations'
 import { createProjectService } from './monaco-ts-language-service'
 import { ProjectFiles } from './monaco-ts-project-files'
 import { typescript as ts } from 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'
-import { resolveRuntimePath } from '../../../../shared/cross-platform-path'
+import { resolveRuntimePath } from '../../../../shared/file-access/cross-platform-path'
 import type {
   CompilerOptions,
   LanguageService,

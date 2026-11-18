@@ -1,6 +1,6 @@
 import { TypeScriptWorker } from 'monaco-editor/esm/vs/language/typescript/tsWorker.js'
 import { typescript as ts } from 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'
-import { isCaseInsensitiveRuntimeRoot } from '../../../../shared/cross-platform-path'
+import { isCaseInsensitiveRuntimeRoot } from '../../../../shared/file-access/cross-platform-path'
 import type { CompilerOptions, IScriptSnapshot, ScriptKind, LanguageService } from 'typescript-api'
 import type { ProjectFiles } from './monaco-ts-project-files'
 

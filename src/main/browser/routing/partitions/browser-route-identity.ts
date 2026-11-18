@@ -23,7 +23,7 @@ export function deriveBrowserRoutePartition(
     ['orca-profile', identity.orcaProfileId],
     ['browser-profile', identity.browserProfileId],
     ['authority-connection', identity.authorityConnectionIdentity],
-    ['execution-host', identity.executionHostIdentity]
+    ['../../../../shared/execution-host/execution-host', identity.executionHostIdentity]
   ] as const
   for (const [, value] of components) {
     if (

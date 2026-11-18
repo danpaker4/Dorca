@@ -1,6 +1,6 @@
 import { access } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
+import { isPathInsideOrEqual } from '../../shared/file-access/cross-platform-path'
 
 export async function hasTypeScriptProjectConfig(root: string, file: string): Promise<boolean> {
   let directory = dirname(file)

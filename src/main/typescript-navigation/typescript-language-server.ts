@@ -2,10 +2,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { CancellationTokenSource, type MessageConnection } from 'vscode-jsonrpc/node'
 import type { FsChangeEvent } from '../../shared/file-watch/filesystem-change-event'
 import type {
+  TypeScriptDocumentRange,
   TypeScriptNavigationRequest,
   TypeScriptNavigationResult
 } from '../../shared/editor-language/typescript-navigation'
-import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
+import { isPathInsideOrEqual } from '../../shared/file-access/cross-platform-path'
 import { startTypeScriptLspTransport } from './typescript-lsp-transport'
 
 type LspRange = {
@@ -15,6 +16,25 @@ type LspRange = {
 type LspLocation =
   | { uri: string; range: LspRange }
   | { targetUri: string; targetSelectionRange: LspRange }
+type LspHover = {
+  contents: { kind: 'markdown' | 'plaintext'; value: string }
+  range?: LspRange
+}
+type LspDiagnostic = {
+  range: LspRange
+  severity?: number
+  message: string
+  code?: number | string
+}
+
+function toEditorRange(range: LspRange): TypeScriptDocumentRange {
+  return {
+    startLineNumber: range.start.line + 1,
+    startColumn: range.start.character + 1,
+    endLineNumber: range.end.line + 1,
+    endColumn: range.end.character + 1
+  }
+}
 
 export class TypeScriptLanguageServer {
   private readonly connection: MessageConnection
@@ -42,6 +62,7 @@ export class TypeScriptLanguageServer {
       workspaceFolders: [{ uri, name: this.root }],
       capabilities: {
         general: { positionEncodings: ['utf-16'] },
+        textDocument: { hover: { contentFormat: ['markdown'] }, diagnostic: {} },
         workspace: { configuration: true, workspaceFolders: true }
       },
       initializationOptions: { enableTelemetry: false, runExternalCode: false }
@@ -49,13 +70,24 @@ export class TypeScriptLanguageServer {
     await this.connection.sendNotification('initialized', {})
   }
 
-  query(
+  async query(
     request: TypeScriptNavigationRequest,
     signal?: AbortSignal
   ): Promise<TypeScriptNavigationResult> {
-    const run = this.pending.then(() => this.execute(request, signal))
-    this.pending = run.catch(() => undefined)
-    return run
+    if (request.kind === 'diagnostics') {
+      let pending: Promise<unknown>
+      do {
+        pending = this.pending
+        await pending
+        signal?.throwIfAborted()
+      } while (pending !== this.pending)
+    }
+    const dispatch = this.pending.then(() => this.dispatch(request, signal))
+    const result = dispatch.then((query) => query.result)
+    // The native server captures the document snapshot on dispatch, so hover can proceed during a check.
+    const serialized = request.kind === 'diagnostics' ? dispatch : result
+    this.pending = serialized.catch(() => undefined)
+    return result
   }
 
   async filesChanged(events: FsChangeEvent[]): Promise<void> {
@@ -78,14 +110,13 @@ export class TypeScriptLanguageServer {
     })
   }
 
-  private async execute(
+  private async dispatch(
     request: TypeScriptNavigationRequest,
     signal?: AbortSignal
-  ): Promise<TypeScriptNavigationResult> {
-    if (signal?.aborted) {
-      throw signal.reason
-    }
+  ): Promise<{ result: Promise<TypeScriptNavigationResult> }> {
+    signal?.throwIfAborted()
     await this.ready
+    signal?.throwIfAborted()
     const retained = new Set(request.buffers.map((buffer) => pathToFileURL(buffer.filePath).href))
     for (const uri of this.documents.keys()) {
       if (!retained.has(uri)) {
@@ -111,19 +142,59 @@ export class TypeScriptLanguageServer {
       )
       this.documents.set(uri, { content: buffer.content, version })
     }
+    signal?.throwIfAborted()
+    return { result: this.requestResult(request, signal) }
+  }
+
+  private async requestResult(
+    request: TypeScriptNavigationRequest,
+    signal?: AbortSignal
+  ): Promise<TypeScriptNavigationResult> {
     const token = new CancellationTokenSource()
     const abort = (): void => token.cancel()
     signal?.addEventListener('abort', abort, { once: true })
     try {
-      if (signal?.aborted) {
-        token.cancel()
-      }
       const params = {
         textDocument: { uri: pathToFileURL(request.filePath).href },
         position: { line: request.lineNumber - 1, character: request.column - 1 },
         ...(request.kind === 'references'
           ? { context: { includeDeclaration: request.includeDeclaration } }
           : {})
+      }
+      if (request.kind === 'hover') {
+        const response = await this.connection.sendRequest<LspHover | null>(
+          'textDocument/hover',
+          params,
+          token.token
+        )
+        return {
+          available: true,
+          locations: [],
+          hover: response
+            ? {
+                markdown: response.contents.value,
+                range: response.range && toEditorRange(response.range)
+              }
+            : undefined
+        }
+      }
+      if (request.kind === 'diagnostics') {
+        const response = await this.connection.sendRequest<{ items: LspDiagnostic[] }>(
+          'textDocument/diagnostic',
+          { textDocument: params.textDocument },
+          token.token
+        )
+        return {
+          available: true,
+          locations: [],
+          errors: response.items
+            .filter(({ severity }) => severity === 1 || severity === undefined)
+            .map(({ range, message, code }) => ({
+              range: toEditorRange(range),
+              message,
+              code: code === undefined ? undefined : String(code)
+            }))
+        }
       }
       const response = await this.connection.sendRequest<LspLocation[] | LspLocation | null>(
         request.kind === 'references' ? 'textDocument/references' : 'textDocument/definition',
@@ -141,17 +212,7 @@ export class TypeScriptLanguageServer {
             return []
           }
           const range = 'range' in entry ? entry.range : entry.targetSelectionRange
-          return [
-            {
-              filePath,
-              range: {
-                startLineNumber: range.start.line + 1,
-                startColumn: range.start.character + 1,
-                endLineNumber: range.end.line + 1,
-                endColumn: range.end.character + 1
-              }
-            }
-          ]
+          return [{ filePath, range: toEditorRange(range) }]
         }
       )
       return { available: true, locations: request.kind === 'prepare' ? [] : locations }

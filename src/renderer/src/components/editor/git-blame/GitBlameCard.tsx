@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button'
-import { LoadingSpinner } from '@/components/LoadingSpinner'
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { useTranslate, useIntlLocale } from '@/i18n/use-translate'
 import type { GitBlameDetail, GitBlameLine } from '../../../../../shared/git/blame/git-blame'
 import { blameAge, blameAvatar } from './git-blame-presentation'

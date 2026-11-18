@@ -1,5 +1,5 @@
 import { relative, resolve } from 'node:path'
-import { isPathInsideOrEqual } from '../../shared/cross-platform-path'
+import { isPathInsideOrEqual } from '../../shared/file-access/cross-platform-path'
 import type {
   TypeScriptNavigationRequest,
   TypeScriptNavigationResult

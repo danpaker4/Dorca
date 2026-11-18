@@ -14,6 +14,8 @@ import { computeRelativePath } from './monaco-ts-workspace-imports'
 import { registerWorkspaceReferences } from './monaco-ts-workspace-references'
 import { registerWorkspaceDefinitions } from './monaco-ts-workspace-definitions'
 import { registerWorkspaceEditorOpener } from './monaco-ts-workspace-opener'
+import { registerWorkspaceTypeScriptHover } from './monaco-ts-workspace-hover'
+import { attachWorkspaceTypeScriptDiagnostics } from './monaco-ts-workspace-diagnostics'
 
 export function installMonacoTypeScriptWorkspaceIntelligence(monaco: typeof Monaco): void {
   const sharedCompilerOptions: Monaco.typescript.CompilerOptions = {
@@ -35,6 +37,7 @@ export function installMonacoTypeScriptWorkspaceIntelligence(monaco: typeof Mona
     defaults.setModeConfiguration({
       ...defaults.modeConfiguration,
       definitions: false,
+      hovers: false,
       references: false
     })
   }
@@ -42,6 +45,7 @@ export function installMonacoTypeScriptWorkspaceIntelligence(monaco: typeof Mona
   registerWorkspaceReferences(monaco)
   registerWorkspaceDefinitions(monaco)
   registerWorkspaceEditorOpener(monaco)
+  registerWorkspaceTypeScriptHover(monaco)
 }
 
 export function registerEditorInstanceForTsWorkspace(
@@ -55,6 +59,7 @@ export function registerEditorInstanceForTsWorkspace(
     historical?: boolean
     isHistorical?: () => boolean
     trackHistory?: boolean
+    diagnostics?: boolean
   }
 ): () => void {
   const { fileId, filePath, worktreeId, modelOwnerKey } = params
@@ -65,6 +70,7 @@ export function registerEditorInstanceForTsWorkspace(
     ? findWorktreeById(selectWorktreesByRepo(state), worktreeId)
     : undefined
   const openFile = state.openFiles?.find((f) => f.id === fileId)
+  let disposeDiagnostics: (() => void) | undefined
   let resolvedRelativePath =
     openFile?.relativePath || (worktree ? computeRelativePath(worktree.path, filePath) : filePath)
 
@@ -98,6 +104,14 @@ export function registerEditorInstanceForTsWorkspace(
           TS_WORKSPACE_LANGUAGE_IDS.includes(model.getLanguageId())
         ) {
           prepareHostTypeScriptNavigation(context, model, monaco)
+          if (params.diagnostics && !context.connectionId) {
+            disposeDiagnostics = attachWorkspaceTypeScriptDiagnostics(
+              monaco,
+              editorInstance,
+              model,
+              context
+            )
+          }
         }
       } else {
         modelContextByUri.delete(modelUriStr)
@@ -149,6 +163,7 @@ export function registerEditorInstanceForTsWorkspace(
   })
 
   return () => {
+    disposeDiagnostics?.()
     disposeNavHistory()
     findAllReferencesAction.dispose()
     definitionAction.dispose()

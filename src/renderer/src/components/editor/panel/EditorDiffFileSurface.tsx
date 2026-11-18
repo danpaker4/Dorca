@@ -176,7 +176,10 @@ export function EditorDiffFileSurface({
           : activeFile.commitCompare?.commitOid
       }
       modifiedIsHistorical={
-        !isEditable && activeFile.diffSource !== 'branch' && activeFile.diffSource !== 'staged'
+        !isEditable &&
+        activeFile.diffSource !== 'branch' &&
+        activeFile.diffSource !== 'staged' &&
+        activeFile.diffSource !== 'commit'
       }
       worktreeId={activeFile.worktreeId}
       noteSource={activeFile}

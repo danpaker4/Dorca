@@ -16,7 +16,7 @@ import type { RpcBinarySender } from '../transports/rpc-binary-sender'
 import { limitRuntimeRpcReplySize } from './runtime-rpc-reply-size-limit'
 import { MOBILE_RPC_METHOD_ALLOWLIST } from './runtime-rpc-mobile-method-allowlist'
 import { MOBILE_RPC_METHOD_ROUTES } from './runtime-rpc-mobile-method-routing'
-import { parseExecutionHostId } from '../../../../shared/execution-host'
+import { parseExecutionHostId } from '../../../../shared/execution-host/execution-host'
 import { WorktreeRemove } from '../../../../shared/rpc-contract/workspaces/worktree-params'
 
 // Stamp proven scope at transport boundary; status.get has no connection context.
@@ -74,7 +74,11 @@ export class RuntimeRpcWebSocketDispatch extends RuntimeRpcMobileDevices {
       }
     }
     // Phone workspace tags cannot choose routing; only this Mac's table does.
-    if (target && MOBILE_RPC_METHOD_ROUTES.get(request.method) !== 'execution-host') {
+    if (
+      target &&
+      MOBILE_RPC_METHOD_ROUTES.get(request.method) !==
+        '../../../../shared/execution-host/execution-host'
+    ) {
       return request
     }
     const local = target && this.mobileDesktopRelay?.localRequestFor(request, target.environmentId)

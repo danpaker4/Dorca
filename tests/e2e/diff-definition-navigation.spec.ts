@@ -2,13 +2,13 @@ import { writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import type { Locator } from '@stablyai/playwright-test'
 import { runProcess } from '@orca/process-host'
-import { test, expect } from './helpers/orca-app'
+import { test, expect } from './desktop/electron-fixtures/orca-app'
 import {
   activateGoldenWorktree,
   cleanupGoldenWorktree,
   createGoldenWorktree
-} from './helpers/golden-source-control'
-import { waitForSessionReady } from './helpers/store'
+} from './golden-journeys/golden-source-control'
+import { waitForSessionReady } from './desktop/renderer-probes/store'
 
 async function answerPosition(line: Locator): Promise<{ x: number; y: number }> {
   return line.evaluate((element) => {
@@ -131,54 +131,65 @@ test('Go to Definition opens imported symbols from inline peek and full diff', a
   ).toBe(false)
 })
 
-test('Go to Definition navigates from read-only staged and branch diffs', async ({
-  orcaPage,
-  testRepoPath,
-  registerPostElectronShutdownCleanup
-}, testInfo) => {
-  await orcaPage.setViewportSize({ width: 1280, height: 900 })
-  const fixture = createGoldenWorktree(testRepoPath, 'readonly-diff-definition')
-  registerPostElectronShutdownCleanup(async () => cleanupGoldenWorktree(testRepoPath, fixture))
-  const filePath = path.join(fixture.worktreePath, 'use.ts')
-  await writeFile(
-    path.join(fixture.worktreePath, 'answer.ts'),
-    'export function answer(value: number) { return value + 40 }\n'
-  )
-  await writeFile(filePath, "import { answer } from './answer'\nexport const result = answer(1)\n")
-  const git = async (args: string[]): Promise<void> => {
-    const result = await runProcess({ program: 'git', args, cwd: fixture.worktreePath })
-    if (result.code) {
-      throw new Error(result.stderr)
+for (const source of ['staged', 'branch', 'blame'] as const) {
+  test(`Go to Definition navigates from read-only ${source} diffs`, async ({
+    orcaPage,
+    testRepoPath,
+    registerPostElectronShutdownCleanup
+  }, testInfo) => {
+    if (source === 'blame') {
+      // Each jump opens the commit diff through the blame card and its history request.
+      test.setTimeout(180_000)
     }
-  }
-  await git(['add', 'answer.ts', 'use.ts'])
-  await git(['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'definition baseline'])
-  await writeFile(
-    filePath,
-    "import { answer } from './answer'\n\nexport const result = answer(2)\n"
-  )
-  await git(['add', 'use.ts'])
-  await waitForSessionReady(orcaPage)
-  await activateGoldenWorktree(orcaPage, testRepoPath, fixture.worktreePath)
-
-  for (const source of ['staged', 'branch'] as const) {
-    if (source === 'branch') {
+    await orcaPage.setViewportSize({ width: 1280, height: 900 })
+    const fixture = createGoldenWorktree(testRepoPath, 'readonly-diff-definition')
+    registerPostElectronShutdownCleanup(async () => cleanupGoldenWorktree(testRepoPath, fixture))
+    const filePath = path.join(fixture.worktreePath, 'use.ts')
+    await writeFile(
+      path.join(fixture.worktreePath, 'answer.ts'),
+      'export function answer(value: number) { return value + 40 }\n'
+    )
+    await writeFile(
+      filePath,
+      "import { answer } from './answer'\nexport const result = answer(1)\n"
+    )
+    const git = async (args: string[]): Promise<void> => {
+      const result = await runProcess({ program: 'git', args, cwd: fixture.worktreePath })
+      if (result.code) {
+        throw new Error(result.stderr)
+      }
+    }
+    await git(['add', 'answer.ts', 'use.ts'])
+    await git(['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'definition baseline'])
+    await writeFile(
+      filePath,
+      "import { answer } from './answer'\n\nexport const result = answer(2)\n"
+    )
+    await git(['add', 'use.ts'])
+    if (source !== 'staged') {
       await git(['-c', 'commit.gpgsign=false', 'commit', '--quiet', '-m', 'use updated answer'])
     }
     // Navigation must use the displayed snapshot's coordinates, even when the working file differs.
     await writeFile(
       filePath,
-      "import { answer } from './answer'\nexport const result = answer(3)\n"
+      source === 'blame'
+        ? "import { answer } from './answer'\n\n// Local change\nexport const result = answer(2)\n"
+        : "import { answer } from './answer'\nexport const result = answer(3)\n"
     )
+    await waitForSessionReady(orcaPage)
+    await activateGoldenWorktree(orcaPage, testRepoPath, fixture.worktreePath)
     for (const view of ['side-by-side', 'inline'] as const) {
-      const openDiff = (): Promise<void> =>
-        orcaPage.evaluate(
+      const openDiff = async (): Promise<void> => {
+        await orcaPage.evaluate(
           async ({ filePath, worktreePath, source, view }) => {
             const state = window.__store!.getState()
-            await state.updateSettings({ diffDefaultView: view, editorGitBlameMode: 'off' })
+            await state.updateSettings({
+              diffDefaultView: view,
+              editorGitBlameMode: source === 'blame' ? 'current-line' : 'off'
+            })
             if (source === 'staged') {
               state.openDiff(state.activeWorktreeId!, filePath, 'use.ts', 'typescript', true)
-            } else {
+            } else if (source === 'branch') {
               const compare = await window.api.git.branchCompare({
                 worktreePath,
                 baseRef: 'HEAD^'
@@ -194,14 +205,34 @@ test('Go to Definition navigates from read-only staged and branch diffs', async 
                 compare.summary,
                 'typescript'
               )
+            } else {
+              state.openFile({
+                filePath,
+                relativePath: 'use.ts',
+                worktreeId: state.activeWorktreeId!,
+                language: 'typescript',
+                mode: 'edit'
+              })
             }
           },
           { filePath, worktreePath: fixture.worktreePath, source, view }
         )
+        if (source === 'blame') {
+          const line = orcaPage
+            .locator('.monaco-editor .view-line')
+            .filter({ hasText: 'answer(2)' })
+          await line.click({ position: await answerPosition(line) })
+          await orcaPage
+            .locator('.git-blame-annotation')
+            .filter({ hasText: 'use updated answer' })
+            .click()
+          const card = orcaPage.getByRole('region', { name: 'Git blame details' })
+          await card.getByRole('button', { name: 'Open Changes' }).click()
+        }
+      }
       for (const gesture of ['F12', 'click', 'menu'] as const) {
         await openDiff()
         const modified = orcaPage.locator('.monaco-diff-editor .monaco-editor').last()
-        await expect(modified.locator('.git-blame-annotation').first()).toBeVisible()
         const line = modified.locator('.view-line').filter({ hasText: 'answer(2)' })
         await expect(line).toBeVisible()
         const position = await answerPosition(line)
@@ -226,5 +257,5 @@ test('Go to Definition navigates from read-only staged and branch diffs', async 
       await expect(orcaPage.locator('.monaco-diff-editor')).toBeVisible()
       await orcaPage.screenshot({ path: testInfo.outputPath(`${source}-${view}.png`) })
     }
-  }
-})
+  })
+}

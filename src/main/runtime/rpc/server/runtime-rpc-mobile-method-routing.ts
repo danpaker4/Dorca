@@ -2,7 +2,9 @@ import { MOBILE_AGENT_SESSION_RPC_METHODS } from './runtime-rpc-mobile-agent-ses
 import { PAIRED_DESKTOP_METHODS } from './runtime-rpc-mobile-paired-desktop-methods'
 
 // Execution-host routes follow the configured target; paired-desktop routes stay with the relaying Mac. This table also defines mobile allowlisting.
-export type MobileRpcMethodRoute = 'execution-host' | 'paired-desktop'
+export type MobileRpcMethodRoute =
+  | '../../../../shared/execution-host/execution-host'
+  | 'paired-desktop'
 
 export const EXECUTION_HOST_METHODS = [
   'ui.getJiraQuickFilters',
@@ -11,6 +13,10 @@ export const EXECUTION_HOST_METHODS = [
   'ui.mutateJiraSavedFilters',
   'agent.launch',
   'agent.launchReplay',
+  // Agent ids, chat records and transcripts live on the host that runs the agent.
+  'agent.list',
+  'agent.read',
+  'agent.show',
   // Read state lives with the host whose worktree.ps reports it.
   'agentActivity.clear',
   'agentActivity.setRead',
@@ -250,6 +256,7 @@ export const EXECUTION_HOST_METHODS = [
   'worktree.resolveMrBase',
   'worktree.resolvePrBase',
   'worktree.rm',
+  'worktree.runApprovedSetup',
   'worktree.set',
   'worktree.show',
   'worktree.sleep'
@@ -257,5 +264,7 @@ export const EXECUTION_HOST_METHODS = [
 
 export const MOBILE_RPC_METHOD_ROUTES: ReadonlyMap<string, MobileRpcMethodRoute> = new Map([
   ...PAIRED_DESKTOP_METHODS.map((method) => [method, 'paired-desktop'] as const),
-  ...EXECUTION_HOST_METHODS.map((method) => [method, 'execution-host'] as const)
+  ...EXECUTION_HOST_METHODS.map(
+    (method) => [method, '../../../../shared/execution-host/execution-host'] as const
+  )
 ])

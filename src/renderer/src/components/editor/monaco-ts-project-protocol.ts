@@ -3,7 +3,7 @@ import {
   isCaseInsensitiveRuntimeRoot,
   isPathInsideOrEqual,
   resolveRuntimePath
-} from '../../../../shared/cross-platform-path'
+} from '../../../../shared/file-access/cross-platform-path'
 
 export type TypeScriptProjectQuery = {
   rootPath: string

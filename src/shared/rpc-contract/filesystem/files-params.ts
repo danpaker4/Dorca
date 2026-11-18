@@ -3,13 +3,14 @@ import { FILE_READ_DIR_MAX_PAGE_ENTRIES } from '../../file-listing/file-dir-page
 import { z } from 'zod'
 import { QUICK_OPEN_REMOTE_QUERY_MAX_CODE_UNITS } from '../../quick-open/quick-open-path-search'
 import { RUNTIME_NAVIGATION_TARGETS } from '../../remote-runtime/session-graph/runtime-navigation'
+import { TYPESCRIPT_NAVIGATION_KINDS } from '../../editor-language/typescript-navigation'
 import { FileOpen, WorktreeSelector } from './files-target-params'
 
 export const TypeScriptNavigationPayload = z
   .object({
     rootPath: z.string().min(1).max(32_768),
     filePath: z.string().min(1).max(32_768),
-    kind: z.enum(['prepare', 'definition', 'references']),
+    kind: z.enum(TYPESCRIPT_NAVIGATION_KINDS),
     lineNumber: z.number().int().min(1),
     column: z.number().int().min(1),
     includeDeclaration: z.boolean(),

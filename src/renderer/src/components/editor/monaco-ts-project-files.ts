@@ -1,5 +1,5 @@
 import { typescript as ts } from 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js'
-import { resolveRuntimePath } from '../../../../shared/cross-platform-path'
+import { resolveRuntimePath } from '../../../../shared/file-access/cross-platform-path'
 import type { ParsedCommandLine, ParseConfigHost } from 'typescript-api'
 import {
   isInsideProject,

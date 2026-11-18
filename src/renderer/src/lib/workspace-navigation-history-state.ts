@@ -1,5 +1,5 @@
 import type { editor } from 'monaco-editor'
-import type { TabCycleType } from '@/components/terminal/tab-type-cycle'
+import type { WorkspaceVisibleTabType as TabCycleType } from '../../../shared/workspace-layout/tab-groups/tab-types'
 
 export type NavHistoryEntry =
   | {

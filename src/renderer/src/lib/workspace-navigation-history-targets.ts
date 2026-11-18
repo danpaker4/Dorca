@@ -1,10 +1,10 @@
 import { useAppStore } from '@/store'
-import { getActiveTabNavOrder } from '@/components/tab-bar/group-tab-order'
+import { getActiveTabNavOrder } from '@/lib/workspace/tabs/order/group-tab-order'
 import {
   getActiveEntityIdForTabType,
   type TypeCyclableTab
-} from '@/components/terminal/tab-type-cycle'
-import { activateCyclableTab } from '@/hooks/ipc-tab-switch'
+} from '@/lib/workspace/tabs/tab-type-cycle'
+import { activateCyclableTab } from '@/lib/workspace/tabs/ipc-tab-switch'
 import { detectLanguage } from '../../../shared/editor-language/editor-language-detect'
 import { getOpenedEditFileIdAfterOpen } from '@/store/slices/editor/file-ids/editor-file-ids'
 import { scheduleEditorLineReveal } from '@/store/slices/editor/focus/editor-focus-reveal'

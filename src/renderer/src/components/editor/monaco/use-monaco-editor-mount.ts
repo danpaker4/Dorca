@@ -180,7 +180,8 @@ export function useMonacoEditorMount(params: MonacoEditorMountParams): OnMount {
         fileId,
         filePath,
         worktreeId,
-        modelOwnerKey
+        modelOwnerKey,
+        diagnostics: !passiveMirror && !autoHeight
       })
 
       const { cursorPositionSub, scrollStateSub } = installMonacoViewStateTracking({

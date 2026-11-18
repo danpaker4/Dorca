@@ -11,6 +11,21 @@ export const GIT_BLAME_METHODS = [
     permission: 'workspace',
     params: GitBlame,
     handler: async (params, { runtime, clientId, connectionId, signal, clientKind, requestId }) => {
+      if (!('mode' in params)) {
+        const result = await runtime.getRuntimeGitStatusBarBlame(
+          params.worktree,
+          params.filePath,
+          params.knownHeadOid
+        )
+        return result.kind === 'ready' &&
+          clientKind &&
+          requestId &&
+          remoteRpcResultExceedsContentBudget(result, remoteRpcContentBudget(requestId), [
+            'headText'
+          ])
+          ? { kind: 'too-large' as const }
+          : result
+      }
       const result = await runtime.getRuntimeGitBlame(
         params.worktree,
         params,

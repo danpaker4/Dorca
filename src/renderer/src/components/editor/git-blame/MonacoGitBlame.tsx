@@ -10,7 +10,7 @@ import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/h
 import { getRuntimeGitBlame } from '@/runtime/source-control/git/runtime-git-blame-client'
 import { getRuntimeGitCommitCompare } from '@/runtime/source-control/git/runtime-git-diff-client'
 import { openAddToChatMenuAt } from '@/components/native-chat/selection-quotes/add-to-chat-point-menu'
-import { formatNativeChatQuote } from '@/components/native-chat/selection-quotes/native-chat-quote-selection'
+import { formatNativeChatQuote } from '../../../../../shared/native-chat/input/quotes/native-chat-quote-selection'
 import type { GitBlameDetail } from '../../../../../shared/git/blame/git-blame'
 import { useMonacoGitBlame } from './use-monaco-git-blame'
 import { GitBlameCard } from './GitBlameCard'

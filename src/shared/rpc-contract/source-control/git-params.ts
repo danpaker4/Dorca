@@ -56,7 +56,7 @@ export const GitInlineHunkAction = WorktreeSelector.extend({
   bufferContent: z.string().max(1024 * 1024)
 })
 
-export const GitBlame = WorktreeSelector.extend({
+const GitDetailedBlame = WorktreeSelector.extend({
   channel: z.string().uuid(),
   sequence: z.number().int().nonnegative(),
   mode: z.enum(['snapshot', 'detail', 'cancel']),
@@ -81,6 +81,13 @@ export const GitDiff = GitFilePath.extend({
   compareAgainstHead: z.boolean().optional(),
   oldPath: z.string().optional()
 })
+
+// Hosts that predate knownHeadOid ignore it and resend the full blame.
+const GitStatusBarBlame = GitFilePath.extend({
+  knownHeadOid: z.string().optional()
+}).strict()
+
+export const GitBlame = z.union([GitDetailedBlame, GitStatusBarBlame])
 
 export const GitBranchCompare = WorktreeSelector.extend({
   admissionTier: OptionalGitAdmissionTier,
@@ -219,7 +226,11 @@ export const GitGenerateCommitMessage = WorktreeSelector.extend({
   sourceControlAi: SourceControlAiSettings.optional(),
   sourceControlAiResolvedParams: ResolvedSourceControlAiGenerationParams.optional(),
   agentCmdOverrides: z.record(z.string(), z.string()).optional(),
-  defaultTuiAgent: OptionalTuiAgent.nullable(),
+  // Why: 'blank' (Blank terminal) picks the same fallback agent as null.
+  defaultTuiAgent: z.preprocess(
+    (value) => (value === 'blank' ? null : value),
+    OptionalTuiAgent.nullable()
+  ),
   commitMessageDiscoveryHostKey: z.string().optional()
 })
 

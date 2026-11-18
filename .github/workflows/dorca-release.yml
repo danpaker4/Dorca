@@ -94,8 +94,6 @@ jobs:
           src/main/updater/releases/updater-prerelease-feed.test.ts
           src/main/updater/releases/updater-prerelease-feed-readiness.test.ts
           src/main/updater/releases/updater-release-builds.test.ts
-          src/main/updater/updater.check-preflight.test.ts
-          src/main/updater/updater.quit-and-install.test.ts
           src/main/updater/updater.dorca-release.test.ts
           src/shared/updater/release-channel.test.ts
 

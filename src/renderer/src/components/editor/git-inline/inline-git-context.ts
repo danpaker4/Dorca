@@ -4,7 +4,7 @@ import { resolveWorktreeGitCopy } from '@/lib/workspace/ownership/worktree-git-c
 import { getRuntimeTargetForFileOwner } from '@/lib/files/access/file-owner-runtime-target'
 import { selectWorkspaceByHostTarget } from '@/store/workspaces/selection/workspace-host-target'
 import { hostWorktreeTarget } from '../../../../../shared/worktree/host-qualified-identity'
-import type { ExecutionHostId } from '../../../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../../../shared/execution-host/execution-host'
 import type { RuntimeGitContext } from '@/runtime/source-control/git/runtime-git-client-context'
 import { BoundedMap } from '../../../../../shared/collections/bounded-map'
 

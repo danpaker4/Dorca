@@ -20,5 +20,6 @@
   },
   "dependencies": {
     "node-addon-api": "^8.9.2"
-  }
+  },
+  "gypfile": false
 }
