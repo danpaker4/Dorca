@@ -4,7 +4,10 @@ import { join, dirname, basename } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { afterEach, expect, it } from 'vitest'
 import { runProcess } from '@orca/process-host'
+import { installRealWorkerThreadChildProcesses } from '../../../worker-thread-child-process/worker-thread-child-process-real.test-fixtures'
 import { queryGitBlame } from './git-blame-query'
+
+installRealWorkerThreadChildProcesses()
 
 const roots: string[] = []
 afterEach(async () => {

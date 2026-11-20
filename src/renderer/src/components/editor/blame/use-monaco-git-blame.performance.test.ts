@@ -23,7 +23,7 @@ vi.mock('@/store/index', () => ({
   }
 }))
 vi.mock('@/runtime/source-control/git/runtime-git-blame-client', () => ({
-  getRuntimeGitBlame: blame
+  getRuntimeGitStatusBarBlame: blame
 }))
 vi.mock('../view-mode/editor-panel-file-mode', () => ({ canUseChangesModeForFile: () => true }))
 vi.mock('./git-blame-target', () => ({
