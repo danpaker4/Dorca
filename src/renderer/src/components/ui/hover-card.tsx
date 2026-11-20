@@ -89,7 +89,10 @@ const hoverCardContentVariants = cva('', {
       'git-blame':
         'w-200 max-w-[min(calc(100vw-1rem),var(--radix-hover-card-content-available-width))] max-h-[min(70vh,var(--radix-hover-card-content-available-height))] overflow-auto p-3 text-xs scrollbar-sleek',
       'workspace-details':
-        'w-[360px] max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto p-3 text-xs scrollbar-sleek'
+        'w-[360px] max-w-[calc(100vw-2rem)] max-h-[28rem] overflow-y-auto p-3 text-xs scrollbar-sleek',
+      // A list row's details beside its panel: compact, one short fact per line.
+      'row-details':
+        'max-h-(--radix-hover-card-content-available-height) w-64 overflow-y-auto p-2.5 text-xs leading-4 [overflow-wrap:anywhere]'
     }
   },
   defaultVariants: { variant: 'default' }
