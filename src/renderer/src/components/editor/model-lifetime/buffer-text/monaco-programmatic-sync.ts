@@ -16,6 +16,21 @@ export function endProgrammaticContentSync(modelKey: string): void {
   programmaticContentSyncDepthByModelKey.set(modelKey, depth - 1)
 }
 
+export function withProgrammaticContentSync(
+  modelKey: string,
+  isApplyingRef: { current: boolean },
+  run: () => void
+): void {
+  beginProgrammaticContentSync(modelKey)
+  isApplyingRef.current = true
+  try {
+    run()
+  } finally {
+    isApplyingRef.current = false
+    endProgrammaticContentSync(modelKey)
+  }
+}
+
 export function isProgrammaticContentSyncInFlight(modelKey: string): boolean {
   return (programmaticContentSyncDepthByModelKey.get(modelKey) ?? 0) > 0
 }

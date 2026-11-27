@@ -15,7 +15,6 @@ const TOKEN_ROLES: Record<PluginAppThemeToken, string> = {
   '--background': 'App canvas',
   '--editor-surface': 'Code editor and notebook background',
   '--editor-cursor': 'Code editor cursor, independent of app focus rings',
-  '--editor-selection': 'Selected code text background; accepts opaque or translucent colors',
   '--editor-inactive-selection': 'Code selection background while the editor is unfocused',
   '--foreground': 'Body text',
   '--card': 'Cards and panels',
@@ -76,6 +75,10 @@ const TOKEN_ROLES: Record<PluginAppThemeToken, string> = {
   '--chat-selection': 'Selected text in chat; may be translucent, it paints over the chat',
   '--chat-selection-foreground': 'Text inside a chat selection',
   '--text-link': 'Links in Markdown previews, editors and agent chat',
+  '--theme-accent-foreground':
+    "Label on a fill of `--text-link` (the accent). Derived from the accent when omitted: near-black or white, whichever reads better. If no label reads on the accent, that fill uses Orca's accent instead; links keep the theme's",
+  '--editor-selection':
+    'Selected text in the code editor; keep it translucent so find matches show through. An unfocused editor shows it at half its opacity',
   '--diff-added': 'Added-line hue: Monaco overview ruler and chat diff text',
   '--diff-added-background': 'Added lines in diffs',
   '--diff-added-emphasis': 'Added characters within a changed line',
@@ -96,6 +99,10 @@ const TOKEN_ROLES: Record<PluginAppThemeToken, string> = {
 // Why: these mix per mode in main.css, come from chat-internal colors that authors cannot set,
 // or fall back differently per surface.
 const OMITTED_DESCRIPTIONS: Partial<Record<PluginAppThemeToken, string>> = {
+  '--tab-active':
+    'light: same as `--tab-bar`; dark: `--foreground` mixed into `--tab-bar`, up to 11%, as deep as keeps the active tab text and line as readable as at 6% (never under 6%)',
+  '--tab-inactive':
+    'light: `--foreground` mixed into `--tab-bar`, up to 8%, as deep as keeps tab text as readable as at 4% (never under 4%); dark: same as `--tab-bar`',
   '--tab-active-indicator':
     'tab line: same as `--tab-active-foreground`; right sidebar tool line: same as `--foreground`',
   '--worktree-sidebar-active-border': 'a mix of `--worktree-sidebar-border`',

@@ -2,7 +2,7 @@ import { NO_RESOURCE_EVIDENCE } from '@/lib/workspace/ownership/workspace-copy-o
 import { useDiffCommentView } from '../../../diff-comments/use-diff-comment-owner'
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DiffEditor, type DiffOnMount } from '@monaco-editor/react'
-import type { editor } from 'monaco-editor'
+import type { IDisposable, editor } from 'monaco-editor'
 import { useAppStore } from '@/store/index'
 import {
   diffViewStateCache,
@@ -28,6 +28,7 @@ import { getDiffViewerLargeDiffSaveAction } from '../large-files/diff-viewer-lar
 import type { DiffViewerProps } from './diff-viewer-props'
 import { syncDiffEditorOriginalWordWrap } from './diff-editor-word-wrap-options'
 import { buildDiffEditorOptions } from './diff-editor-options'
+import { restoreDiffViewStateWhileLayoutSettles } from './diff-view-state-restore'
 import { useDiffEditorRegistration } from '../review/diff-navigation-context'
 import { preserveDiffViewStateAcrossModelSwaps } from './diff-model-swap-view-state'
 import { usePluginSyntaxLanguage } from '../../monaco/use-plugin-syntax-language'
@@ -36,6 +37,7 @@ import { cn } from '@/lib/class-names'
 import { wholeFileDiffTintClass } from './whole-file-diff-tint'
 import { useDiffEditorLanguageNavigation } from './diff-editor-language-navigation'
 import { MonacoDiffGitBlame } from '../../git-blame/MonacoDiffGitBlame'
+import { syncKeptDiffModelsOnMount } from './diff-kept-model-content-sync'
 
 export default function DiffViewer({
   modelKey,
@@ -122,26 +124,14 @@ export default function DiffViewer({
   }, [scrollToDiffCommentId, diffComments, worktreeId])
 
   // A draft keeps its captured owner across a same-tab rename but saves under the file's current path.
-  const relativePathRef = useRef(relativePath)
+  const propsRef = useRef({ relativePath, language, onSave, originalContent, modifiedContent })
   useLayoutEffect(() => {
-    relativePathRef.current = relativePath
-  }, [relativePath])
-  const handleCreateComment = useCallback(
-    async ({
-      lineNumber,
-      startLine,
-      body
-    }: {
-      lineNumber: number
-      startLine?: number
-      body: string
-    }): Promise<boolean> => {
+    propsRef.current = { relativePath, language, onSave, originalContent, modifiedContent }
+  }, [relativePath, language, onSave, originalContent, modifiedContent])
+  const handleCreateComment = useCallback<NonNullable<DiffViewerProps['onAddLineComment']>>(
+    async (draft) => {
       if (onAddLineComment) {
-        return onAddLineComment({
-          lineNumber,
-          startLine,
-          body
-        })
+        return onAddLineComment(draft)
       }
       if (!worktreeId) {
         return false
@@ -149,11 +139,9 @@ export default function DiffViewer({
       const result = await (commentOwner
         ? addDiffComment(commentOwner, {
             worktreeId,
-            filePath: relativePathRef.current,
+            filePath: propsRef.current.relativePath,
             source: 'diff',
-            startLine,
-            lineNumber,
-            body,
+            ...draft,
             side: 'modified'
           })
         : null)
@@ -197,6 +185,14 @@ export default function DiffViewer({
     onPendingScrollConsumed: () => setScrollToDiffCommentId(null)
   })
 
+  // Note navigation scrolls after the cached restore; end the settle window so it can't pull the view back.
+  const viewStateRestoreRef = useRef<IDisposable | null>(null)
+  useEffect(() => {
+    if (pendingScrollForThisViewer) {
+      viewStateRestoreRef.current?.dispose()
+    }
+  }, [pendingScrollForThisViewer, modifiedEditor])
+
   useDiffViewerFirstChangeAutoScroll({
     diffEditorRef,
     modifiedEditor,
@@ -211,6 +207,7 @@ export default function DiffViewer({
     cancelAnimationFrame(wordWrapMountFrameRef.current)
     wordWrapOptionsSubRef.current?.dispose()
     wordWrapOptionsSubRef.current = null
+    viewStateRestoreRef.current = null
     // Capture the exact instance before clearing; unregister ignores stale identities.
     const fallenBackEditor = diffEditorRef.current
     diffEditorRef.current = null
@@ -222,14 +219,14 @@ export default function DiffViewer({
   }, [unregisterDiffEditor])
 
   const onSaveRef = useRef(onSave)
-  onSaveRef.current = onSave
   const onContentChangeRef = useRef(onContentChange)
-  onContentChangeRef.current = onContentChange
+  useLayoutEffect(() => {
+    onSaveRef.current = onSave
+    onContentChangeRef.current = onContentChange
+  })
 
   const { setupCopy, toastNode } = useContextualCopySetup()
 
-  const propsRef = useRef({ relativePath, language, onSave })
-  propsRef.current = { relativePath, language, onSave }
   const currentDiffModelPaths = useDiffViewerLargeDiffLifecycle({
     limited: renderLimit.limited,
     modelKey,
@@ -269,12 +266,15 @@ export default function DiffViewer({
         lineNumberOptionsSubRef.current = null
         wordWrapOptionsSubRef.current?.dispose()
         wordWrapOptionsSubRef.current = null
+        viewStateRestoreRef.current = null
         unregisterDiffEditor(diffEditor)
         diffEditorRef.current = null
         setModifiedEditor(null)
         setOriginalEditor(null)
       })
       diffEditor.onDidDispose(preserveDiffViewStateAcrossModelSwaps(diffEditor).dispose)
+      // Before the content listener attaches, so reconciling never reads as a user edit.
+      syncKeptDiffModelsOnMount(diffEditor, propsRef)
 
       setupCopy(originalEditor, monaco, filePath, propsRef)
       setupCopy(modifiedEditor, monaco, filePath, propsRef)
@@ -282,9 +282,10 @@ export default function DiffViewer({
       setOriginalEditor(originalEditor)
 
       const savedViewState = diffViewStateCache.get(modelKey)
-      if (savedViewState) {
-        requestAnimationFrame(() => diffEditor.restoreViewState(savedViewState))
-      }
+      viewStateRestoreRef.current = savedViewState
+        ? restoreDiffViewStateWhileLayoutSettles(diffEditor, savedViewState)
+        : null
+      // Auto-scroll runs separately after decorator view zones mount.
 
       if (editable) {
         const cleanupSaveShortcut = installEditorSaveShortcut(

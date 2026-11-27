@@ -134,6 +134,7 @@ export default function TerminalPaneHeaderOverlay({
         destination={{ pane, tabId, worktreeId, cwd, managerRef, paneTransportsRef }}
         className="pane-title-bar"
         data-terminal-tab-id={tabId}
+        data-pane-title-leaf-id={pane.leafId}
         data-pane-prevent-terminal-focus=""
         {...(isActivePane ? { 'data-active-pane': '' } : {})}
         {...(isChromeless ? { 'data-chromeless': '' } : {})}
@@ -216,7 +217,7 @@ export default function TerminalPaneHeaderOverlay({
                       size="icon-xs"
                       aria-label={t(
                         'components.agentSessionContinuation.handOffToAnotherAgent',
-                        'Hand Off to Another Agent'
+                        'Hand off to agent'
                       )}
                       onClick={(event) => {
                         event.stopPropagation()
@@ -229,7 +230,7 @@ export default function TerminalPaneHeaderOverlay({
                   <TooltipContent side="bottom" sideOffset={4}>
                     {t(
                       'components.agentSessionContinuation.handOffToAnotherAgent',
-                      'Hand Off to Another Agent'
+                      'Hand off to agent'
                     )}
                   </TooltipContent>
                 </Tooltip>

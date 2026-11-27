@@ -16,6 +16,7 @@ import {
   readCachedPluginAppTheme
 } from './app-shell/appearance/document-theme'
 import { installTypingLatencyDiagnostic } from './diagnostics/typing-latency/diagnostic'
+import { installFocusedHostGestureWake } from './runtime/rpc/calls/focused-host-gesture-wake'
 import { installAppKeyboardRouter } from './lib/keyboard/app-keyboard-router'
 import { installWorkspaceNavigationHistory } from './lib/workspace-navigation-history'
 import { shouldEnableReactGrab } from './diagnostics/react-commits/react-grab-dev-gate'
@@ -43,6 +44,7 @@ import.meta.hot?.dispose(disposeBodyOverlayAttributes)
 recordRendererCrashBreadcrumb('renderer_bootstrap_started', { dev: import.meta.env.DEV })
 installRendererCrashDiagnostics()
 installTypingLatencyDiagnostic()
+installFocusedHostGestureWake()
 installAppKeyboardRouter()
 const disposeWorkspaceNavigationHistory = installWorkspaceNavigationHistory()
 import.meta.hot?.dispose(disposeWorkspaceNavigationHistory)

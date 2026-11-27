@@ -13,14 +13,23 @@ const replyTextSchema = z.object({
 export function acpReplyNoticeFailure(
   method: string,
   params: unknown,
-  notice: RegExp,
-  cause: Pick<AcpTurnEnding, 'notSignedIn'> = {}
+  notice: Pick<RegExp, 'test'>,
+  cause: Pick<AcpTurnEnding, 'notSignedIn'> = {},
+  /** A readable sentence for the notice, its raw words then kept under Details, and any cause
+   *  the words name (a usage limit). */
+  readable?: (
+    notice: string
+  ) =>
+    | Partial<Pick<AcpTurnEnding, 'failureDetail' | 'failureFrame' | 'stopReason' | 'usageLimit'>>
+    | undefined
 ): AcpDialectNotification | undefined {
   const text =
     method === 'session/update'
       ? replyTextSchema.safeParse(params).data?.update.content.text
       : undefined
-  return text && notice.test(text)
-    ? { disposition: 'map', failure: { stopReason: 'error', ...cause, failureDetail: text.trim() } }
-    : undefined
+  if (!text || !notice.test(text)) {
+    return undefined
+  }
+  const words = readable?.(text.trim()) ?? { failureDetail: text.trim() }
+  return { disposition: 'map', failure: { stopReason: 'error', ...cause, ...words } }
 }

@@ -30,6 +30,8 @@ module.exports = {
     typeof getAddon().isolatedSpawnBreaksAwayFromJob === 'function'
       ? getAddon().isolatedSpawnBreaksAwayFromJob()
       : true,
+  tcpClientOwnerAsync: (clientHost, clientPort, serverHost, serverPort) =>
+    getAddon().tcpClientOwnerAsync(clientHost, clientPort, serverHost, serverPort),
   // Reads the binding this package resolved, so a build probe tests the binary the app loads.
   hasNativeExport: (name) =>
     typeof getAddon()[name] === 'function' ||

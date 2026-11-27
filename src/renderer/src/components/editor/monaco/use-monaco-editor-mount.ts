@@ -4,10 +4,7 @@ import { useAppStore } from '@/store/index'
 import { registerFileSearchSelectedTextProvider } from '@/lib/files/search/file-search-selection'
 import { syncContentOnMount } from '../model-lifetime/buffer-text/monaco-content-sync'
 import { toEditorModelUri } from '../model-lifetime/identity/editor-model-uri'
-import {
-  beginProgrammaticContentSync,
-  endProgrammaticContentSync
-} from '../model-lifetime/buffer-text/monaco-programmatic-sync'
+import { withProgrammaticContentSync } from '../model-lifetime/buffer-text/monaco-programmatic-sync'
 import { createMarkdownDocLinkDecorationController } from '../markdown-source-tools/monaco/monaco-markdown-doc-link-decorations'
 import { ensureMarkdownDocCompletionProvider } from '../markdown-source-tools/monaco/monaco-markdown-doc-completions'
 import { clampMonacoAutoHeight } from './monaco-auto-height'
@@ -131,9 +128,7 @@ export function useMonacoEditorMount(params: MonacoEditorMountParams): OnMount {
         // Why: no live model holds the truth, so drop the stale cache once to reload from disk.
         requestStaleCacheReload(fileIdRef.current, contentRef.current)
       } else {
-        beginProgrammaticContentSync(modelKey)
-        isApplyingProgrammaticContentRef.current = true
-        try {
+        withProgrammaticContentSync(modelKey, isApplyingProgrammaticContentRef, () => {
           if (
             syncContentOnMount(
               editorInstance,
@@ -144,10 +139,7 @@ export function useMonacoEditorMount(params: MonacoEditorMountParams): OnMount {
           ) {
             lastSyncedContentRef.current = contentRef.current
           }
-        } finally {
-          isApplyingProgrammaticContentRef.current = false
-          endProgrammaticContentSync(modelKey)
-        }
+        })
       }
 
       setupCopy(editorInstance, monaco, filePath, propsRef)

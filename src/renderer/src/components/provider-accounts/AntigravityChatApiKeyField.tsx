@@ -15,16 +15,13 @@ type Props = {
   owner: RuntimeClientTarget
   disabled: boolean
   onStatus: (status: AntigravityChatApiKeyStatus | null) => void
-  /** A newly saved key signs the chat in right away. */
-  onSaved: () => void
 }
 
 /** Paste a Gemini API key, kept encrypted on the chat's host; GEMINI_API_KEY is the fallback. */
 export function AntigravityChatApiKeyField({
   owner,
   disabled,
-  onStatus,
-  onSaved
+  onStatus
 }: Props): React.JSX.Element {
   const t = useTranslate()
   const id = useId()
@@ -57,9 +54,6 @@ export function AntigravityChatApiKeyField({
         setStatus(next)
         setDraft('')
         setReplacing(false)
-        if (action.kind === 'save') {
-          onSaved()
-        }
       })
       .catch((cause: unknown) =>
         setError(
@@ -135,7 +129,7 @@ export function AntigravityChatApiKeyField({
           {hint ? `${hint} ` : null}
           {!status?.saved && (
             <ManagedRuntimeLinkButton onClick={() => openAppHttpLink(GET_KEY_URL)}>
-              {t('accounts.antigravity.apiKeyGet', 'Get a key from Google AI Studio')}
+              {t('accounts.antigravity.apiKeyGet', 'Get API key')}
             </ManagedRuntimeLinkButton>
           )}
         </p>
